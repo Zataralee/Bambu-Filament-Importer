@@ -1,0 +1,294 @@
+<Window x:Class="BambuFilamentImporter.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:models="clr-namespace:BambuFilamentImporter.Models"
+        mc:Ignorable="d"
+        Title="Bambu Filament Importer" Icon="BFI Icon.ico" Height="840" Width="1320" MinHeight="700" MinWidth="1060"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="13,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="MinWidth" Value="108"/>
+        </Style>
+        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+        <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="RowHeaderWidth" Value="0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style x:Key="EllipsisCell" TargetType="TextBlock">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=Text}"/>
+        </Style>
+        <HierarchicalDataTemplate DataType="{x:Type models:FilamentGroup}" ItemsSource="{Binding Items}">
+            <TextBlock Text="{Binding Header}" FontWeight="SemiBold"/>
+        </HierarchicalDataTemplate>
+        <HierarchicalDataTemplate DataType="{x:Type models:FilamentProductGroup}" ItemsSource="{Binding Items}">
+            <TextBlock Text="{Binding Header}"/>
+        </HierarchicalDataTemplate>
+        <DataTemplate DataType="{x:Type models:CurrentFilamentEntry}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Name}" Width="300" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding Location}" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,16" LastChildFill="False">
+            <StackPanel DockPanel.Dock="Left">
+                <TextBlock Text="Bambu Filament Importer" FontSize="27" FontWeight="SemiBold"/>
+                <TextBlock Text="Manufacturer profile packages and local Bambu Studio library management" FontSize="14" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4,0,0"/>
+                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.1 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <CheckBox x:Name="DarkModeCheck" Content="Dark mode" VerticalAlignment="Center" Margin="0,0,16,0"
+                          Checked="DarkModeCheck_Changed" Unchecked="DarkModeCheck_Changed"/>
+                <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12,8">
+                    <TextBlock x:Name="BambuStatusText" Text="Checking Bambu Studio..." FontWeight="SemiBold"/>
+                </Border>
+            </StackPanel>
+        </DockPanel>
+
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Package" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="PackagePathText" Text="No .bflib package selected" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Refresh Library" Click="RefreshLibrary_Click"/>
+                    <Button x:Name="BackupLibraryButton" Content="Back Up Library" Click="BackupLibrary_Click"/>
+                    <Button x:Name="RestoreLibraryButton" Content="Import Backup" Click="RestoreLibrary_Click"/>
+                    <Button Content="Install Selected" x:Name="InstallButton" Click="Install_Click" IsEnabled="False" Margin="0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="310"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="Import Options" FontSize="17" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="SummaryText" Text="Select a package to preview its contents and compare it to the current library." TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,8,0,18"/>
+
+                        <TextBlock Text="Destination" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <RadioButton x:Name="DeviceAmsRadio" GroupName="Destination" Content="Device / AMS catalog" Margin="0,0,0,9" Checked="Destination_Changed"/>
+                        <RadioButton x:Name="ProjectLibraryRadio" GroupName="Destination" Content="Bambu Studio Project Library" Margin="0,0,0,9" Checked="Destination_Changed"/>
+                        <RadioButton x:Name="BothRadio" GroupName="Destination" Content="Both" IsChecked="True" Margin="0,0,0,16" Checked="Destination_Changed"/>
+                        <CheckBox x:Name="InstallProgramCheck" Content="Mirror catalog to Program Files" IsChecked="False" Margin="0,0,0,18"/>
+
+                        <TextBlock Text="Target Printers" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <TextBlock Text="Detected from this Bambu Studio setup" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,7"/>
+                        <ListBox x:Name="PrinterList" MaxHeight="150" Margin="0,0,0,7" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                              Checked="PrinterTarget_Changed" Unchecked="PrinterTarget_Changed"
+                                              Content="{Binding DisplayName}" Margin="2,4"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                            <Button Content="Select All" Click="SelectAllPrinters_Click" MinWidth="0"/>
+                            <Button Content="Clear" Click="ClearPrinters_Click" MinWidth="0" Margin="0"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                            <Button Content="Skip Duplicates" Click="SkipDuplicates_Click" MinWidth="0"/>
+                            <Button Content="Select All" Click="SelectAll_Click" MinWidth="0" Margin="0"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Locations" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <TextBlock Text="Device / AMS uses the manufacturer catalog. Project Library uses account-level user presets. Both keeps manufacturer grouping and adds profiles to the project dropdown." TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,18"/>
+
+                        <TextBlock Text="Detected Paths" FontWeight="SemiBold" Margin="0,4,0,6"/>
+                        <TextBlock x:Name="PathsText" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Border Grid.Column="2" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="15">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TabControl x:Name="MainTabs">
+                        <TabItem Header="Import Package">
+                            <Grid Margin="0,10,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <DockPanel Grid.Row="0" Margin="0,0,0,10" LastChildFill="True">
+                                    <Button DockPanel.Dock="Right" Content="Import Filament Package" Click="OpenPackage_Click" MinWidth="175" Margin="8,0,0,0"/>
+                                    <StackPanel>
+                                        <TextBlock Text="Filament Package" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Choose a manufacturer library to review before installation." Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                                <DataGrid x:Name="PackageGrid" Grid.Row="1" SelectionChanged="PackageGrid_SelectionChanged">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Header="Install" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="62"/>
+                                        <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="260"/>
+                                        <DataGridTextColumn Header="Manufacturer" Binding="{Binding VendorGroup, UpdateSourceTrigger=PropertyChanged}" Width="155"/>
+                                        <DataGridTextColumn Header="Family" Binding="{Binding MaterialFamily}" IsReadOnly="True" Width="90"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" IsReadOnly="True" Width="110"/>
+                                        <DataGridTextColumn Header="Package path" Binding="{Binding RelativePath}" IsReadOnly="True" Width="260"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <Border Grid.Row="2" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="11" Margin="0,11,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="190"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Selected Import Profile" FontWeight="SemiBold"/>
+                                            <TextBox x:Name="PackageNameText" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,10,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Manufacturer" FontWeight="SemiBold"/>
+                                            <TextBox x:Name="PackageVendorText" Text="{Binding VendorGroup, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,10,0"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Content="Apply Edit" Click="ApplyPackageEdit_Click" VerticalAlignment="Bottom" Margin="0"/>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </TabItem>
+
+                        <TabItem Header="Current Bambu Library">
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="350"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Grid Grid.Column="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBox x:Name="LibrarySearchText" TextChanged="LibrarySearchText_Changed" Margin="0,0,0,8" ToolTip="Filter the current library"/>
+                                    <TreeView x:Name="CurrentTree" Grid.Row="1" SelectedItemChanged="CurrentTree_SelectedItemChanged"/>
+                                </Grid>
+
+                                <Grid Grid.Column="2">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <Border Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" VerticalAlignment="Top" MaxHeight="175">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock x:Name="CurrentSelectionTitle" Text="Select a manufacturer, filament, or printer profile" FontWeight="SemiBold" FontSize="15"/>
+                                            <Grid Grid.Row="1" Margin="0,10,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="190"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="Profile name" FontWeight="SemiBold"/>
+                                                    <TextBox x:Name="CurrentNameText" Margin="0,4,10,0"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="Manufacturer" FontWeight="SemiBold"/>
+                                                    <TextBox x:Name="CurrentVendorText" Margin="0,4,0,0"/>
+                                                </StackPanel>
+                                            </Grid>
+                                            <Grid Grid.Row="2" Margin="0,10,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock x:Name="CurrentLocationText" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}"/>
+                                                    <TextBlock x:Name="CurrentSourceText" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,2,10,0"/>
+                                                </StackPanel>
+                                                <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
+                                                    <Button x:Name="SaveCurrentButton" Content="Save Profile" Click="SaveCurrentEdit_Click" IsEnabled="False" Visibility="Collapsed"/>
+                                                    <Button x:Name="RenameManufacturerButton" Content="Rename Manufacturer" Click="RenameManufacturer_Click" IsEnabled="False" Visibility="Collapsed"/>
+                                                    <Button x:Name="RemoveProfileButton" Content="Remove Profile" Click="RemoveCurrent_Click" IsEnabled="False" Visibility="Collapsed"/>
+                                                    <Button x:Name="RemoveFilamentButton" Content="Remove Filament" Click="RemoveFilament_Click" IsEnabled="False" Visibility="Collapsed"/>
+                                                    <Button x:Name="RemoveManufacturerButton" Content="Remove Manufacturer" Click="RemoveManufacturer_Click" IsEnabled="False" Visibility="Collapsed" Margin="0"/>
+                                                </WrapPanel>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+
+                                    <Grid Grid.Row="1" Margin="0,11,0,7">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="250"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Effective Filament Settings" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <TextBox x:Name="SettingsSearchText" Grid.Column="1" TextChanged="SettingsSearchText_Changed" ToolTip="Filter profile settings"/>
+                                    </Grid>
+
+                                    <DataGrid x:Name="SettingsGrid" Grid.Row="2" BeginningEdit="SettingsGrid_BeginningEdit" IsReadOnly="False">
+                                        <DataGrid.RowStyle>
+                                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </DataGrid.RowStyle>
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Category" Binding="{Binding Category}" IsReadOnly="True" Width="95"/>
+                                            <DataGridTextColumn Header="Setting" Binding="{Binding DisplayName}" IsReadOnly="True" Width="170" ElementStyle="{StaticResource EllipsisCell}"/>
+                                            <DataGridTextColumn Header="Value" Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Width="*" MinWidth="110"/>
+                                            <DataGridTextColumn Header="Origin" Binding="{Binding Origin}" IsReadOnly="True" Width="145" ElementStyle="{StaticResource EllipsisCell}"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
+
+                    <TextBox x:Name="LogBox" Grid.Row="1" Height="105" Margin="0,12,0,0" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <TextBlock Grid.Row="3" Text="Bambu Studio must be closed before installing, editing, or removing profiles. Program Files changes require Administrator access." Foreground="{DynamicResource MutedTextBrush}" Margin="0,12,0,0"/>
+    </Grid>
+</Window>

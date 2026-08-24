@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a reproducible importer or Bambu Studio integration problem.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Do not upload Bambu Studio configuration files until you have removed account, printer, network, and access-code information.
+  - type: input
+    id: importer-version
+    attributes:
+      label: Importer version
+      placeholder: 0.4.1
+    validations:
+      required: true
+  - type: input
+    id: studio-version
+    attributes:
+      label: Bambu Studio version
+    validations:
+      required: true
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+    validations:
+      required: true
+  - type: input
+    id: printer
+    attributes:
+      label: Printer model and nozzle
+      placeholder: Bambu Lab X1 Carbon, 0.4 mm
+  - type: dropdown
+    id: destination
+    attributes:
+      label: Import destination
+      options:
+        - Device / AMS catalog
+        - Bambu Studio Project Library
+        - Both
+        - Library management or backup
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Describe the shortest sequence that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and error text
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Relevant entries from %LOCALAPPDATA%\BambuFilamentImporter\error.log may be pasted here after removing sensitive data.

@@ -1,0 +1,44 @@
+name: Filament profile request
+description: Request a new manufacturer, product family, or parameter correction.
+title: "[Filament]: "
+labels:
+  - filament-profile
+body:
+  - type: input
+    id: manufacturer
+    attributes:
+      label: Manufacturer
+    validations:
+      required: true
+  - type: input
+    id: product
+    attributes:
+      label: Product or material family
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Official technical source
+      description: Link to the manufacturer's product page, TDS, or printing guide.
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Published settings
+      description: Include nozzle, bed, drying, cooling, enclosure, and hardened-nozzle recommendations when available.
+    validations:
+      required: true
+  - type: textarea
+    id: calibration
+    attributes:
+      label: Optional tested calibration
+      description: Identify printer, nozzle, plate, flow ratio, maximum volumetric speed, and whether values are experimental.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Source confirmation
+      options:
+        - label: I distinguished manufacturer-published values from my own calibration results.
+          required: true

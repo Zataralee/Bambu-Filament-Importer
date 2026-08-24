@@ -1,0 +1,30 @@
+# Build output
+bin/
+obj/
+dist/
+Tests/bin/
+Tests/obj/
+Tests/artifacts/
+
+# Local recovery and backup data
+recovery/
+*.bflbackup
+*.bflib-backup-*
+*.pre-restore-*
+
+# User and IDE state
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs and local settings
+*.log
+settings.json
+
+# OS metadata
+Thumbs.db
+Desktop.ini
+.DS_Store

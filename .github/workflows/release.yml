@@ -1,0 +1,63 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Rebuild manufacturer packages
+        shell: pwsh
+        run: ./tools/BuildManufacturerPackages.ps1
+
+      - name: Build
+        run: dotnet build ./BambuFilamentImporter.csproj -c Release
+
+      - name: Validate packages
+        shell: pwsh
+        run: |
+          $dll = Resolve-Path './bin/Release/net10.0-windows/BambuFilamentImporter.dll'
+          Get-ChildItem './packages/manufacturers' -Filter '*.bflib' | ForEach-Object {
+            dotnet $dll --validate-package $_.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "Package validation failed: $($_.Name)"
+            }
+          }
+
+      - name: Publish standalone Windows application
+        run: >-
+          dotnet publish ./BambuFilamentImporter.csproj -c Release -r win-x64
+          --self-contained true -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true -o ./release/app
+
+      - name: Assemble release bundle
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path './release/bundle/Manufacturer Libraries' -Force | Out-Null
+          Copy-Item './release/app/BambuFilamentImporter.exe' './release/bundle/'
+          Copy-Item './packages/manufacturers/*.bflib' './release/bundle/Manufacturer Libraries/'
+          Copy-Item './README.md','./LICENSE','./CHANGELOG.md' './release/bundle/'
+          Compress-Archive -Path './release/bundle/*' -DestinationPath "./release/Bambu-Filament-Importer-$env:GITHUB_REF_NAME-win-x64.zip"
+
+      - name: Create GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$env:GITHUB_REF_NAME" `
+            './release/app/BambuFilamentImporter.exe' `
+            "./release/Bambu-Filament-Importer-$env:GITHUB_REF_NAME-win-x64.zip" `
+            --title "Bambu Filament Importer $env:GITHUB_REF_NAME" `
+            --generate-notes
