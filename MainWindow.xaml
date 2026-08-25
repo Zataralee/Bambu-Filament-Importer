@@ -55,7 +55,7 @@
             <StackPanel DockPanel.Dock="Left">
                 <TextBlock Text="Bambu Filament Importer" FontSize="27" FontWeight="SemiBold"/>
                 <TextBlock Text="Manufacturer profile packages and local Bambu Studio library management" FontSize="14" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4,0,0"/>
-                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.1 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
+                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.2 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                 <CheckBox x:Name="DarkModeCheck" Content="Dark mode" VerticalAlignment="Center" Margin="0,0,16,0"
@@ -198,10 +198,17 @@
                                 <Grid Grid.Column="0">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
                                     <TextBox x:Name="LibrarySearchText" TextChanged="LibrarySearchText_Changed" Margin="0,0,0,8" ToolTip="Filter the current library"/>
-                                    <TreeView x:Name="CurrentTree" Grid.Row="1" SelectedItemChanged="CurrentTree_SelectedItemChanged"/>
+                                    <Border x:Name="AmsIdWarningPanel" Grid.Row="1" Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="9" Margin="0,0,0,8" Visibility="Collapsed">
+                                        <StackPanel>
+                                            <TextBlock x:Name="AmsIdStatusText" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                            <Button Content="Repair AMS IDs" Click="RepairAmsIds_Click" MinWidth="0" HorizontalAlignment="Left" Margin="0,7,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TreeView x:Name="CurrentTree" Grid.Row="2" SelectedItemChanged="CurrentTree_SelectedItemChanged"/>
                                 </Grid>
 
                                 <Grid Grid.Column="2">

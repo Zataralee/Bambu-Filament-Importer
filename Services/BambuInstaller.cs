@@ -19,6 +19,7 @@ public sealed class BambuInstaller
 
     public InstallResult Install(LoadedFilamentPackage package, ImportDestination destination, bool installProgram)
     {
+        package = AmsFilamentId.NormalizePackage(package);
         if (_isStudioRunning())
         {
             throw new InvalidOperationException("Close Bambu Studio before importing. Bambu Studio may overwrite preset/config files while it exits.");

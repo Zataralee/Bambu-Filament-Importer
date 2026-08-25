@@ -5,6 +5,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
+$usedFilamentIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
 function Get-Template([string]$Family) {
     switch -Regex ($Family) {
@@ -45,6 +46,28 @@ function Get-DeterministicCode([string]$Text, [int]$Length) {
     }
 }
 
+function Get-AmsSafeFilamentId([string]$ExistingId, [string]$StableKey) {
+    $current = $ExistingId.Trim()
+    if ($current.Length -gt 0 -and $current.Length -le 8 -and $usedFilamentIds.Add($current)) {
+        return $current
+    }
+
+    if ($current.Length -gt 8) {
+        $truncated = $current.Substring(0, 8)
+        if ($usedFilamentIds.Add($truncated)) {
+            return $truncated
+        }
+    }
+
+    for ($salt = 0; ; $salt++) {
+        $input = if ($salt -eq 0) { $StableKey } else { "$StableKey|$salt" }
+        $candidate = 'V' + (Get-DeterministicCode $input 7)
+        if ($usedFilamentIds.Add($candidate)) {
+            return $candidate
+        }
+    }
+}
+
 function Get-Array([object]$Value) {
     return @([string]$Value)
 }
@@ -68,7 +91,8 @@ foreach ($manufacturer in $catalog.manufacturers) {
             $name = [string]$product.name
             $family = [string]$product.family
             $baseName = "$name @base"
-            $filamentId = "V" + (Get-DeterministicCode "$($manufacturer.manufacturer)|$name" 4)
+            $stableKey = "$($manufacturer.manufacturer)|$name"
+            $filamentId = Get-AmsSafeFilamentId ("V" + (Get-DeterministicCode $stableKey 4)) $baseName
             $sourceUrl = if ([string]::IsNullOrWhiteSpace([string]$product.sourceUrl)) {
                 [string]$manufacturer.sourceUrls[0]
             } else {
@@ -197,6 +221,8 @@ if (Test-Path -LiteralPath $sunluSource) {
             finally {
                 $profileReader.Dispose()
             }
+
+            $baseJson.filament_id = Get-AmsSafeFilamentId ([string]$baseJson.filament_id) ([string]$baseEntry.name)
 
             $preferredChild = $sourceManifest.profiles | Where-Object {
                 ([string]$_.name).Equals((([string]$baseEntry.name).Replace(' @base', ' @BBL X1C')))

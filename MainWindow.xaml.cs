@@ -29,7 +29,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.1" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.2" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -55,6 +55,66 @@ public partial class MainWindow : Window
         LoadCurrentLibrary();
         LoadPrinterTargets();
         MarkDuplicates(autoSkipDuplicates: true);
+    }
+
+    private void RepairAmsIds_Click(object sender, RoutedEventArgs e)
+    {
+        if (!EnsureBambuClosed("repairing AMS filament IDs"))
+        {
+            return;
+        }
+
+        try
+        {
+            var service = new AmsFilamentIdRepairService(_paths);
+            var audit = service.Audit();
+            if (audit.AffectedFiles == 0)
+            {
+                MessageBox.Show(this, "No AMS filament ID problems were found.", "AMS IDs are healthy", MessageBoxButton.OK, MessageBoxImage.Information);
+                RefreshAmsIdStatus();
+                return;
+            }
+
+            var approval = MessageBox.Show(
+                this,
+                $"Repair {audit.AffectedProducts} filament IDs across {audit.AffectedFiles} profile files?{Environment.NewLine}{Environment.NewLine}" +
+                "Each changed file will be backed up first. Program Files copies may require Administrator approval.",
+                "Repair AMS filament IDs",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Warning);
+            if (approval != MessageBoxResult.OK)
+            {
+                return;
+            }
+
+            SetLibraryOperationState("Repairing AMS filament IDs...");
+            var result = ElevationService.RepairAmsIdsWithElevation(_paths);
+            Log($"Repaired {result.RepairedProducts} AMS filament IDs across {result.ChangedFiles} profile files.");
+            foreach (var change in result.Changes)
+            {
+                Log($"AMS ID: {change.Name}: {change.CurrentId} -> {change.NewId}");
+            }
+
+            RefreshAfterLibraryChange();
+            MessageBox.Show(
+                this,
+                $"AMS ID repair complete.{Environment.NewLine}{Environment.NewLine}" +
+                $"Filaments repaired: {result.RepairedProducts}{Environment.NewLine}" +
+                $"Profile files updated: {result.ChangedFiles}{Environment.NewLine}{Environment.NewLine}" +
+                "You can now open Bambu Studio and sync the AMS again.",
+                "AMS repair complete",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "AMS repair failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            Log(ex.ToString());
+        }
+        finally
+        {
+            RefreshBambuStatus();
+        }
     }
 
     private void DarkModeCheck_Changed(object sender, RoutedEventArgs e)
@@ -675,6 +735,7 @@ public partial class MainWindow : Window
             }
 
             BuildCurrentGroups();
+            RefreshAmsIdStatus();
             var systemCount = _currentFilaments.Count(item => item.StorageKind == FilamentStorageKind.SystemCatalog);
             var userCount = _currentFilaments.Count - systemCount;
             Log($"Loaded {systemCount} Device/AMS catalog profiles and {userCount} Project Library user presets.");
@@ -682,6 +743,23 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Log($"Current library scan failed: {ex.Message}");
+        }
+    }
+
+    private void RefreshAmsIdStatus()
+    {
+        try
+        {
+            var audit = new AmsFilamentIdRepairService(_paths).Audit();
+            AmsIdWarningPanel.Visibility = audit.AffectedFiles > 0 ? Visibility.Visible : Visibility.Collapsed;
+            AmsIdStatusText.Text = audit.AffectedFiles == 0
+                ? ""
+                : $"{audit.AffectedProducts} filament IDs need AMS compatibility repair ({audit.AffectedFiles} files).";
+        }
+        catch (Exception ex)
+        {
+            AmsIdWarningPanel.Visibility = Visibility.Collapsed;
+            Log($"AMS ID audit failed: {ex.Message}");
         }
     }
 

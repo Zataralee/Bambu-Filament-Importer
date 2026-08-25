@@ -14,6 +14,7 @@ public static class PrinterProfileExpander
         IReadOnlyCollection<CurrentFilamentEntry>? currentEntries = null,
         ImportDestination destination = ImportDestination.Both)
     {
+        package = AmsFilamentId.NormalizePackage(package);
         if (!package.Manifest.PrinterNeutral)
         {
             return package;

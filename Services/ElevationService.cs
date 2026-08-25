@@ -102,6 +102,85 @@ public static class ElevationService
         }
     }
 
+    public static AmsFilamentIdRepairResult RepairAmsIdsWithElevation(BambuPaths paths)
+    {
+        var service = new AmsFilamentIdRepairService(paths);
+        var audit = service.Audit();
+        if (audit.ProgramFilesAffected == 0 || IsAdministrator())
+        {
+            return service.Repair();
+        }
+
+        var helperFolder = Path.Combine(Path.GetTempPath(), "BambuFilamentImporter");
+        Directory.CreateDirectory(helperFolder);
+        var resultPath = Path.Combine(helperFolder, $"ams-repair-{Guid.NewGuid():N}.result.json");
+
+        try
+        {
+            var executable = Environment.ProcessPath
+                ?? throw new InvalidOperationException("The importer executable path could not be determined.");
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = executable,
+                Verb = "runas",
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            startInfo.ArgumentList.Add("--elevated-repair-ams-ids");
+            startInfo.ArgumentList.Add(resultPath);
+            using var process = Process.Start(startInfo)
+                ?? throw new InvalidOperationException("The elevated AMS repair helper could not be started.");
+            process.WaitForExit();
+
+            if (!File.Exists(resultPath))
+            {
+                throw new InvalidOperationException("The elevated AMS repair helper did not return a result.");
+            }
+
+            var result = JsonSerializer.Deserialize<ElevatedAmsRepairResult>(File.ReadAllText(resultPath), JsonOptions)
+                ?? throw new InvalidOperationException("The elevated AMS repair result could not be read.");
+            if (!result.Success)
+            {
+                throw new InvalidOperationException(result.Message);
+            }
+
+            return result.Result;
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            throw new InvalidOperationException("Administrator approval was canceled. No AMS filament IDs were changed.");
+        }
+        finally
+        {
+            TryDelete(resultPath);
+        }
+    }
+
+    public static int ExecuteAmsIdRepair(string resultPath)
+    {
+        try
+        {
+            if (BambuProcess.IsStudioRunning())
+            {
+                throw new InvalidOperationException("Bambu Studio opened before AMS ID repair completed. Close it and try again.");
+            }
+
+            var result = new AmsFilamentIdRepairService(new BambuPaths()).Repair();
+            WriteResult(resultPath, new ElevatedAmsRepairResult
+            {
+                Success = true,
+                Message = "AMS filament ID repair complete.",
+                Result = result
+            });
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            WriteResult(resultPath, new ElevatedAmsRepairResult { Success = false, Message = ex.Message });
+            return 2;
+        }
+    }
+
     public static List<CurrentFilamentEntry> ExpandPhysicalCopies(IEnumerable<CurrentFilamentEntry> logicalEntries)
     {
         var result = new List<CurrentFilamentEntry>();
@@ -196,6 +275,18 @@ public static class ElevationService
         File.WriteAllText(resultPath, JsonSerializer.Serialize(result, JsonOptions));
     }
 
+    private static void WriteResult(string path, ElevatedAmsRepairResult result)
+    {
+        var resultPath = Path.GetFullPath(path);
+        var allowedRoot = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "BambuFilamentImporter"));
+        if (!IsWithin(resultPath, allowedRoot))
+        {
+            throw new InvalidDataException("The elevated result path is outside the importer temporary folder.");
+        }
+
+        File.WriteAllText(resultPath, JsonSerializer.Serialize(result, JsonOptions));
+    }
+
     private static void TryDelete(string path)
     {
         try
@@ -232,5 +323,12 @@ public static class ElevationService
         public bool Success { get; set; }
         public int RemovedCount { get; set; }
         public string Message { get; set; } = "";
+    }
+
+    private sealed class ElevatedAmsRepairResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+        public AmsFilamentIdRepairResult Result { get; set; } = new();
     }
 }

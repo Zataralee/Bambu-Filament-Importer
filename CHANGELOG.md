@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2 - 2026-08-24
+
+- Fixed AMS-to-project synchronization for manufacturer IDs longer than the printer's eight-character limit.
+- Added globally unique AMS ID generation and package normalization.
+- Added a backed-up Repair AMS IDs action for roaming and Program Files catalog copies.
+- Added regression coverage for P1S synchronization and PA6 ID collisions.
+
 ## 0.4.1 - 2026-08-24
 
 - Moved package selection into the Import Package tab and renamed it to Import Filament Package.

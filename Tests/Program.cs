@@ -22,6 +22,21 @@ var manufacturerPackages = Directory.EnumerateFiles(Path.Combine(projectRoot, "p
     .ToList();
 Check(manufacturerPackages.Count == 9, "manufacturer package count");
 Check(manufacturerPackages.Sum(item => item.Manifest.Profiles.Count) == 243, "manufacturer filament total");
+var manufacturerIds = manufacturerPackages
+    .SelectMany(item => item.Manifest.Profiles.Select(profile => (Package: item, Profile: profile)))
+    .Where(item => item.Profile.Name.EndsWith("@base", StringComparison.OrdinalIgnoreCase))
+    .Select(item =>
+    {
+        var json = JsonNode.Parse(item.Package.ProfileJsonByPath[item.Profile.RelativePath])!.AsObject();
+        return AmsFilamentId.Read(json) ?? "";
+    })
+    .ToList();
+Check(manufacturerIds.All(id => id.Length is > 0 and <= AmsFilamentId.MaximumLength), "all manufacturer IDs fit AMS limit");
+Check(manufacturerIds.Distinct(StringComparer.OrdinalIgnoreCase).Count() == manufacturerIds.Count, "manufacturer AMS IDs are globally unique");
+var neutralSunlu = PackageReader.Load(Path.Combine(projectRoot, "packages", "manufacturers", "SUNLU.bflib"));
+var mattePetgProfile = neutralSunlu.Manifest.Profiles.First(profile => profile.Name == "SUNLU High Speed Matte PETG @base");
+var mattePetgJson = JsonNode.Parse(neutralSunlu.ProfileJsonByPath[mattePetgProfile.RelativePath])!.AsObject();
+Check(AmsFilamentId.Read(mattePetgJson) == "GFSNL194", "P1S AMS round-trip ID retained");
 Check(manufacturerPackages.All(item => item.Manifest.PrinterNeutral), "all manufacturer packages printer-neutral");
 Check(manufacturerPackages.SelectMany(item => item.ProfileJsonByPath.Values)
     .All(json => !json.Contains("compatible_printers", StringComparison.OrdinalIgnoreCase)), "no printer dependency in package payloads");
@@ -99,6 +114,33 @@ var testPaths = new BambuPaths(roaming, program);
 
 try
 {
+    var amsRoaming = Path.Combine(sandbox, "AmsRepairBambuStudio");
+    var amsProgram = Path.Combine(sandbox, "AmsRepairProgramProfiles");
+    var amsRoamingSunlu = Path.Combine(amsRoaming, "system", "BBL", "filament", "SUNLU");
+    var amsProgramSunlu = Path.Combine(amsProgram, "BBL", "filament", "SUNLU");
+    Directory.CreateDirectory(amsRoamingSunlu);
+    Directory.CreateDirectory(amsProgramSunlu);
+    File.WriteAllText(Path.Combine(amsRoamingSunlu, "SUNLU High Speed Matte PETG @base.json"),
+        "{\"type\":\"filament\",\"name\":\"SUNLU High Speed Matte PETG @base\",\"filament_id\":\"GFSNL194539FC\"}");
+    File.WriteAllText(Path.Combine(amsProgramSunlu, "SUNLU High Speed Matte PETG @base.json"),
+        "{\"type\":\"filament\",\"name\":\"SUNLU High Speed Matte PETG @base\",\"filament_id\":\"GFSNL194539FC\"}");
+    File.WriteAllText(Path.Combine(amsRoamingSunlu, "SUNLU PA6-CF @base.json"),
+        "{\"type\":\"filament\",\"name\":\"SUNLU PA6-CF @base\",\"filament_id\":\"GFSNLPA6CF\"}");
+    File.WriteAllText(Path.Combine(amsRoamingSunlu, "SUNLU PA6-GF @base.json"),
+        "{\"type\":\"filament\",\"name\":\"SUNLU PA6-GF @base\",\"filament_id\":\"GFSNLPA6GF\"}");
+    var amsRepairService = new AmsFilamentIdRepairService(new BambuPaths(amsRoaming, amsProgram), () => false);
+    var amsAudit = amsRepairService.Audit();
+    Check(amsAudit.AffectedProducts == 3 && amsAudit.AffectedFiles == 4 && amsAudit.ProgramFilesAffected == 1, "AMS ID repair audit");
+    var amsRepair = amsRepairService.Repair();
+    Check(amsRepair.RepairedProducts == 3 && amsRepair.ChangedFiles == 4 && amsRepair.BackupFiles.Count == 4, "AMS ID repair backups");
+    var repairedMatteRoaming = JsonNode.Parse(File.ReadAllText(Path.Combine(amsRoamingSunlu, "SUNLU High Speed Matte PETG @base.json")))!.AsObject();
+    var repairedMatteProgram = JsonNode.Parse(File.ReadAllText(Path.Combine(amsProgramSunlu, "SUNLU High Speed Matte PETG @base.json")))!.AsObject();
+    Check(AmsFilamentId.Read(repairedMatteRoaming) == "GFSNL194" && AmsFilamentId.Read(repairedMatteProgram) == "GFSNL194", "AMS truncated ID matches device value");
+    var repairedPaCf = AmsFilamentId.Read(JsonNode.Parse(File.ReadAllText(Path.Combine(amsRoamingSunlu, "SUNLU PA6-CF @base.json")))!.AsObject());
+    var repairedPaGf = AmsFilamentId.Read(JsonNode.Parse(File.ReadAllText(Path.Combine(amsRoamingSunlu, "SUNLU PA6-GF @base.json")))!.AsObject());
+    Check(repairedPaCf!.Length <= 8 && repairedPaGf!.Length <= 8 && !repairedPaCf.Equals(repairedPaGf, StringComparison.OrdinalIgnoreCase), "AMS collision assigned unique IDs");
+    Check(amsRepairService.Audit().AffectedFiles == 0, "AMS repair is idempotent");
+
     var devicePackage = PackageReader.Load(packagePath);
     SelectOnly(devicePackage, "SUNLU ABS @base", "SUNLU ABS @BBL X1C");
     var editedBase = devicePackage.Manifest.Profiles.First(profile => profile.Name == "SUNLU ABS @base");

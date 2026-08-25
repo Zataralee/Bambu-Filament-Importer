@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.1 | By Zataralee**
+**Version 0.4.2 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -44,6 +44,7 @@ Official source references and catalog policy are documented in [catalogs/README
 - Displays and edits direct and inherited temperatures, cooling, drying, flow, retraction, and calibration values.
 - Renames and removes individual profiles, complete filaments, or manufacturers.
 - Detects duplicates and preserves existing compatible Bambu presets.
+- Audits and repairs AMS filament IDs that are too long or collide after printer synchronization.
 - Creates complete `.bflbackup` library backups and merges them during restoration.
 - Creates safety backups before changing Bambu Studio files.
 - Refuses write operations while Bambu Studio is running.
@@ -77,6 +78,8 @@ A `.bflib` file is a ZIP archive containing:
 - official source URLs and package compatibility notes in the manifest
 
 The package does not contain hard-coded printer names. The importer creates compatible child profiles only for printer models selected at installation time.
+
+AMS filament IDs are limited to eight characters and must be unique. The importer normalizes package IDs during installation and can repair older installed libraries from the **Current Bambu Library** tab.
 
 ## Building
 
