@@ -60,6 +60,7 @@ public static class PrinterProfileExpander
             var overwriteExisting = product.IsDuplicate;
             var baseExists = currentEntries?.Any(entry =>
                 entry.StorageKind == FilamentStorageKind.SystemCatalog
+                && IsActiveEntry(entry, FilamentStorageKind.SystemCatalog)
                 && entry.Name.Equals(baseName, StringComparison.OrdinalIgnoreCase)) == true;
             var writeBase = destination != ImportDestination.ProjectLibrary && (!baseExists || overwriteExisting);
             expandedManifest.Profiles.Add(CloneEntry(product, baseName, basePath, writeBase));
@@ -121,6 +122,23 @@ public static class PrinterProfileExpander
         };
     }
 
+    public static bool IsActiveEntry(CurrentFilamentEntry entry, FilamentStorageKind storageKind)
+    {
+        if (entry.StorageKind != storageKind)
+        {
+            return false;
+        }
+
+        if (storageKind == FilamentStorageKind.UserPreset || string.IsNullOrWhiteSpace(entry.ProfileRoot))
+        {
+            return true;
+        }
+
+        return entry.CanEdit
+            || entry.Source.StartsWith("Roaming", StringComparison.OrdinalIgnoreCase)
+            || entry.AdditionalCopies.Any(copy => copy.Source.StartsWith("Roaming", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool IsTargetCoveredInStorage(
         FilamentProfileEntry product,
         PrinterTarget target,
@@ -129,7 +147,7 @@ public static class PrinterProfileExpander
     {
         var productName = CurrentFilamentEntry.GetProductName(product.Name);
         var matching = currentEntries
-            .Where(entry => entry.StorageKind == storageKind
+            .Where(entry => IsActiveEntry(entry, storageKind)
                 && entry.ProductName.Equals(productName, StringComparison.OrdinalIgnoreCase))
             .ToList();
         var coveredMachines = matching

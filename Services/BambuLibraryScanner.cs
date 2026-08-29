@@ -112,17 +112,20 @@ public sealed class BambuLibraryScanner
             }
 
             var inProject = projectPresets.Contains(name);
+            var isRoaming = source.StartsWith("Roaming", StringComparison.OrdinalIgnoreCase);
             var entry = new CurrentFilamentEntry
             {
                 Name = name,
                 OriginalName = name,
                 Source = source,
-                Location = inProject ? "Device/AMS catalog + Project Library" : "Device/AMS catalog only",
+                Location = isRoaming
+                    ? inProject ? "Device/AMS catalog + Project Library" : "Device/AMS catalog only"
+                    : "Installed mirror only (not active Device/AMS)",
                 RelativePath = relativePath,
                 ProfileRoot = profileRoot,
                 ProfilePath = profilePath,
                 IsProjectPreset = inProject,
-                CanEdit = source.StartsWith("Roaming", StringComparison.OrdinalIgnoreCase),
+                CanEdit = isRoaming,
                 StorageKind = FilamentStorageKind.SystemCatalog,
                 VendorGroup = "",
                 MaterialFamily = ""

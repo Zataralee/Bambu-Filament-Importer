@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.4 - 2026-08-29
+
+- Fixed target discovery so locally registered printer records take precedence over unrelated or stale enabled machine presets.
+- Added a clearly labeled enabled-preset fallback for setups without recognizable local device records.
+- Added continuous Bambu Studio process monitoring, immediate workspace locking, and automatic refresh after Studio closes.
+- Fixed active-catalog gap detection so Program Files-only mirrors no longer hide missing Device/AMS profiles.
+- Added a warning when bundled manufacturer profiles remain only in an inactive install mirror after a catalog refresh.
+- Added regression coverage for Bambu system-preset refreshes removing active manufacturer profiles while leaving inactive mirrors behind.
+
 ## 0.4.3 - 2026-08-29
 
 - Fixed SUNLU Marble PLA imports that could leave Bambu's unselected printer profiles pointing at a renamed base preset.

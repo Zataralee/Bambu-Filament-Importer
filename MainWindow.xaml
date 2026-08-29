@@ -55,7 +55,7 @@
             <StackPanel DockPanel.Dock="Left">
                 <TextBlock Text="Bambu Filament Importer" FontSize="27" FontWeight="SemiBold"/>
                 <TextBlock Text="Manufacturer profile packages and local Bambu Studio library management" FontSize="14" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4,0,0"/>
-                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.3 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
+                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.4 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                 <Button x:Name="UpdateButton" Content="Check for updates" Click="CheckForUpdates_Click" Margin="0,0,12,0"/>
@@ -67,7 +67,7 @@
             </StackPanel>
         </DockPanel>
 
-        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,14">
+        <Border x:Name="LibraryActionBar" Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,14">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -86,7 +86,7 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="2">
+        <Grid x:Name="WorkspacePanel" Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="310"/>
                 <ColumnDefinition Width="14"/>
@@ -105,14 +105,15 @@
                         <RadioButton x:Name="BothRadio" GroupName="Destination" Content="Both" IsChecked="True" Margin="0,0,0,16" Checked="Destination_Changed"/>
                         <CheckBox x:Name="InstallProgramCheck" Content="Mirror catalog to Program Files" IsChecked="False" Margin="0,0,0,18"/>
 
-                        <TextBlock Text="Local Machine Presets" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                        <TextBlock Text="Read from Bambu Studio files on this PC. No printer or account connection." TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,7"/>
+                        <TextBlock Text="Target Printer Models" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <TextBlock x:Name="PrinterDiscoveryStatusText" Text="Reading local Bambu Studio device records..." TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,7"/>
                         <ListBox x:Name="PrinterList" MaxHeight="150" Margin="0,0,0,7" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
-                                              Checked="PrinterTarget_Changed" Unchecked="PrinterTarget_Changed"
-                                              Content="{Binding DisplayName}" Margin="2,4"/>
+                                              Checked="PrinterTarget_Changed" Unchecked="PrinterTarget_Changed" Margin="2,4">
+                                        <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap"/>
+                                    </CheckBox>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
@@ -200,16 +201,23 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
                                     <TextBox x:Name="LibrarySearchText" TextChanged="LibrarySearchText_Changed" Margin="0,0,0,8" ToolTip="Filter the current library"/>
                                     <Border x:Name="AmsIdWarningPanel" Grid.Row="1" Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="9" Margin="0,0,0,8" Visibility="Collapsed">
                                         <StackPanel>
                                             <TextBlock x:Name="AmsIdStatusText" TextWrapping="Wrap" FontWeight="SemiBold"/>
-                                            <Button Content="Repair AMS IDs" Click="RepairAmsIds_Click" MinWidth="0" HorizontalAlignment="Left" Margin="0,7,0,0"/>
+                                            <Button x:Name="RepairAmsIdsButton" Content="Repair AMS IDs" Click="RepairAmsIds_Click" MinWidth="0" HorizontalAlignment="Left" Margin="0,7,0,0"/>
                                         </StackPanel>
                                     </Border>
-                                    <TreeView x:Name="CurrentTree" Grid.Row="2" SelectedItemChanged="CurrentTree_SelectedItemChanged"/>
+                                    <Border x:Name="CatalogDriftWarningPanel" Grid.Row="2" Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="9" Margin="0,0,0,8" Visibility="Collapsed">
+                                        <StackPanel>
+                                            <TextBlock x:Name="CatalogDriftStatusText" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                            <Button Content="Review Import" Click="ReviewCatalogDrift_Click" MinWidth="0" HorizontalAlignment="Left" Margin="0,7,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <TreeView x:Name="CurrentTree" Grid.Row="3" SelectedItemChanged="CurrentTree_SelectedItemChanged"/>
                                 </Grid>
 
                                 <Grid Grid.Column="2">

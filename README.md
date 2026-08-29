@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.3 | By Zataralee**
+**Version 0.4.4 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -14,7 +14,7 @@ A native Windows desktop utility for importing, organizing, editing, backing up,
 
 Bambu Studio stores filament presets in several locations and associates system presets with compatible printer definitions. Bambu Filament Importer provides one manufacturer-level `.bflib` package while generating the required per-printer profiles at installation time.
 
-The importer reads the printer models and nozzle sizes enabled in the user's own Bambu Studio configuration. A package is therefore not tied to the original developer's printers.
+The importer identifies locally registered printer models from the user's own Bambu Studio configuration, then uses enabled machine presets only as a clearly labeled fallback. A package is therefore not tied to the original developer's printers.
 
 ## Included Libraries
 
@@ -37,7 +37,7 @@ Official source references and catalog policy are documented in [catalogs/README
 ## Features
 
 - Imports printer-neutral manufacturer libraries to selected Bambu Studio printer models.
-- Reads enabled machine models and nozzle sizes from the user's local Bambu Studio configuration.
+- Reads locally registered printer models from Bambu Studio and excludes unrelated enabled presets when device records are available.
 - Compares actual `compatible_printers` coverage and generates only missing profiles.
 - Imports to the Device/AMS catalog, Project Library, or both.
 - Scans the current library as Manufacturer > Filament > printer profile.
@@ -48,11 +48,12 @@ Official source references and catalog policy are documented in [catalogs/README
 - Creates complete `.bflbackup` library backups and merges them during restoration.
 - Creates safety backups before changing Bambu Studio files.
 - Validates the complete catalog before and after installation and rolls back a failed write automatically.
-- Refuses write operations while Bambu Studio is running.
+- Monitors Bambu Studio continuously, locks the workspace whenever it opens, and refreshes local records when it closes.
+- Detects packaged profiles left only in an inactive Program Files mirror after a Bambu catalog refresh.
 - Checks GitHub Releases and installs confirmed updates in place.
 - Supports persistent light and dark modes.
 
-BFI does not connect to Bambu printers or Bambu Cloud and does not read account credentials. Network access is used only when the user selects **Check for updates**, and the request goes to this repository's GitHub Releases API.
+BFI does not connect to Bambu printers or Bambu Cloud and does not read account credentials or access-code values. Local device identifiers are used only to identify printer models and are never displayed, logged, or transmitted. Network access is used only when the user selects **Check for updates**, and the request goes to this repository's GitHub Releases API.
 
 ![Bambu Filament Importer dark mode](docs/images/main-window-dark.png)
 

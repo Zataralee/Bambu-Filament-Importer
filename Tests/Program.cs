@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json.Nodes;
 using System.Windows.Media;
@@ -95,6 +96,21 @@ Check(gapExpansion.Manifest.Profiles.Count == 2, "only missing printer coverage 
 Check(!gapExpansion.Manifest.Profiles.First(profile => profile.Name.EndsWith("@base")).IsSelected, "existing base profile preserved");
 Check(gapExpansion.Manifest.Profiles.Any(profile => profile.Name.EndsWith("@BBL P1S") && profile.IsSelected), "missing P1S coverage selected");
 Check(gapExpansion.Manifest.Profiles.All(profile => !profile.Name.EndsWith("@BBL X1C")), "covered X1C profile not duplicated");
+var installedMirrorOnly = partialLibrary.Select(entry => new CurrentFilamentEntry
+{
+    Name = entry.Name,
+    StorageKind = entry.StorageKind,
+    ProfileRoot = @"C:\Program Files\Bambu Studio\resources\profiles",
+    Source = "Installed system catalog",
+    CompatiblePrinters = [.. entry.CompatiblePrinters]
+}).ToList();
+var mirrorGapExpansion = PrinterProfileExpander.Expand(
+    gapPackage,
+    [x1cTarget, p1sTarget],
+    installedMirrorOnly,
+    ImportDestination.DeviceAms);
+Check(mirrorGapExpansion.Manifest.Profiles.Count == 3
+    && mirrorGapExpansion.Manifest.Profiles.All(profile => profile.IsSelected), "installed mirror does not hide active catalog gaps");
 
 var sandbox = Path.Combine(Path.GetTempPath(), "BambuFilamentImporterSmoke-" + Guid.NewGuid().ToString("N"));
 var roaming = Path.Combine(sandbox, "BambuStudio");
@@ -114,6 +130,52 @@ var testPaths = new BambuPaths(roaming, program);
 
 try
 {
+    var discoveryRoaming = Path.Combine(sandbox, "DiscoveryBambuStudio");
+    var discoveryProgram = Path.Combine(sandbox, "DiscoveryProgramProfiles");
+    var discoveryMachineFolder = Path.Combine(discoveryRoaming, "system", "BBL", "machine");
+    Directory.CreateDirectory(discoveryMachineFolder);
+    Directory.CreateDirectory(discoveryProgram);
+    File.WriteAllText(Path.Combine(discoveryMachineFolder, "P1S.json"),
+        "{\"type\":\"machine\",\"instantiation\":\"true\",\"name\":\"Bambu Lab P1S 0.4 nozzle\",\"printer_model\":\"Bambu Lab P1S\",\"printer_variant\":\"0.4\"}");
+    File.WriteAllText(Path.Combine(discoveryMachineFolder, "X1C.json"),
+        "{\"type\":\"machine\",\"instantiation\":\"true\",\"name\":\"Bambu Lab X1 Carbon 0.4 nozzle\",\"printer_model\":\"Bambu Lab X1 Carbon\",\"printer_variant\":\"0.4\"}");
+    var discoveryConfig = new JsonObject
+    {
+        ["app"] = new JsonObject { ["user_last_selected_machine"] = "01P000000000001" },
+        ["access_code"] = new JsonObject { ["01P000000000001"] = "local-test-code" },
+        ["models"] = new JsonArray
+        {
+            new JsonObject { ["vendor"] = "BBL", ["model"] = "Bambu Lab P1S", ["nozzle_diameter"] = "0.4" },
+            new JsonObject { ["vendor"] = "BBL", ["model"] = "Bambu Lab X1 Carbon", ["nozzle_diameter"] = "0.4" }
+        }
+    };
+    File.WriteAllText(Path.Combine(discoveryRoaming, "BambuStudio.conf"), discoveryConfig.ToJsonString());
+    var registeredDiscovery = new PrinterDiscoveryService(new BambuPaths(discoveryRoaming, discoveryProgram)).Discover();
+    Check(registeredDiscovery.UsesRegisteredDevices
+        && registeredDiscovery.Printers.Count == 1
+        && registeredDiscovery.Printers[0].ModelName == "Bambu Lab P1S", "registered device excludes stale X1C preset");
+    discoveryConfig.Remove("access_code");
+    ((JsonObject)discoveryConfig["app"]!).Remove("user_last_selected_machine");
+    File.WriteAllText(Path.Combine(discoveryRoaming, "BambuStudio.conf"), discoveryConfig.ToJsonString());
+    var fallbackDiscovery = new PrinterDiscoveryService(new BambuPaths(discoveryRoaming, discoveryProgram)).Discover();
+    Check(!fallbackDiscovery.UsesRegisteredDevices && fallbackDiscovery.Printers.Count == 2, "enabled preset fallback remains available");
+
+    var processProbePath = Path.Combine(sandbox, "bambu-studio.exe");
+    File.Copy(Path.Combine(Environment.SystemDirectory, "ping.exe"), processProbePath);
+    using (var processProbe = Process.Start(new ProcessStartInfo
+    {
+        FileName = processProbePath,
+        Arguments = "-t 127.0.0.1",
+        CreateNoWindow = true,
+        UseShellExecute = false
+    })!)
+    {
+        Thread.Sleep(250);
+        Check(BambuProcess.IsStudioRunning(), "renamed Bambu Studio process detected live");
+        processProbe.Kill(entireProcessTree: true);
+        processProbe.WaitForExit();
+    }
+
     var amsRoaming = Path.Combine(sandbox, "AmsRepairBambuStudio");
     var amsProgram = Path.Combine(sandbox, "AmsRepairProgramProfiles");
     var amsRoamingSunlu = Path.Combine(amsRoaming, "system", "BBL", "filament", "SUNLU");

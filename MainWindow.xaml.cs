@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Threading;
 using BambuFilamentImporter.Models;
 using BambuFilamentImporter.Services;
 using Microsoft.Win32;
@@ -19,17 +21,20 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<PrinterTarget> _printerTargets = [];
     private readonly FilamentSettingsService _settingsService;
     private readonly ICollectionView _settingsView;
+    private readonly DispatcherTimer _studioMonitor;
     private LoadedFilamentPackage? _package;
     private CurrentFilamentEntry? _selectedCurrent;
     private FilamentProductGroup? _selectedProduct;
     private FilamentGroup? _selectedManufacturer;
     private FilamentProfileEntry? _selectedPackageProfile;
+    private bool? _lastStudioRunning;
+    private List<string> _catalogDriftPackages = [];
 
     public MainWindow()
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.3" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.4" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -46,6 +51,17 @@ public partial class MainWindow : Window
         LoadPrinterTargets();
         RefreshBambuStatus();
         LoadCurrentLibrary();
+        _studioMonitor = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _studioMonitor.Tick += StudioMonitor_Tick;
+        _studioMonitor.Start();
+        Closed += (_, _) => _studioMonitor.Stop();
+        Loaded += (_, _) =>
+        {
+            if (_lastStudioRunning == true)
+            {
+                ShowStudioOpenWarning();
+            }
+        };
     }
 
     private async void CheckForUpdates_Click(object sender, RoutedEventArgs e)
@@ -789,6 +805,7 @@ public partial class MainWindow : Window
 
             BuildCurrentGroups();
             RefreshAmsIdStatus();
+            RefreshCatalogDriftStatus();
             var systemCount = _currentFilaments.Count(item => item.StorageKind == FilamentStorageKind.SystemCatalog);
             var userCount = _currentFilaments.Count - systemCount;
             Log($"Loaded {systemCount} Device/AMS catalog profiles and {userCount} Project Library user presets.");
@@ -814,6 +831,62 @@ public partial class MainWindow : Window
             AmsIdWarningPanel.Visibility = Visibility.Collapsed;
             Log($"AMS ID audit failed: {ex.Message}");
         }
+    }
+
+    private void RefreshCatalogDriftStatus()
+    {
+        try
+        {
+            var packageFolders = new[]
+            {
+                Path.Combine(AppContext.BaseDirectory, "Manufacturer Libraries"),
+                Path.Combine(AppContext.BaseDirectory, "packages", "manufacturers")
+            };
+            var packages = packageFolders
+                .Where(Directory.Exists)
+                .SelectMany(folder => Directory.EnumerateFiles(folder, "*.bflib", SearchOption.TopDirectoryOnly))
+                .DistinctBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .Select(PackageReader.Load)
+                .ToList();
+
+            var mirrorOnlyNames = _currentFilaments
+                .Where(entry => entry.StorageKind == FilamentStorageKind.SystemCatalog
+                    && !PrinterProfileExpander.IsActiveEntry(entry, FilamentStorageKind.SystemCatalog))
+                .Select(entry => entry.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var affected = packages
+                .Select(package => new
+                {
+                    package.Manifest.DisplayName,
+                    Count = package.Manifest.Profiles.Count(profile => mirrorOnlyNames.Contains(profile.Name))
+                })
+                .Where(item => item.Count > 0)
+                .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            _catalogDriftPackages = affected.Select(item => item.DisplayName).ToList();
+            var missingProfiles = affected.Sum(item => item.Count);
+            CatalogDriftWarningPanel.Visibility = missingProfiles > 0 ? Visibility.Visible : Visibility.Collapsed;
+            CatalogDriftStatusText.Text = missingProfiles == 0
+                ? ""
+                : $"{missingProfiles} packaged filament profile(s) exist only in the inactive install mirror. Reimport {string.Join(", ", _catalogDriftPackages)} to restore Device/AMS visibility.";
+        }
+        catch (Exception ex)
+        {
+            CatalogDriftWarningPanel.Visibility = Visibility.Collapsed;
+            Log($"Catalog drift audit failed: {ex.Message}");
+        }
+    }
+
+    private void ReviewCatalogDrift_Click(object sender, RoutedEventArgs e)
+    {
+        MainTabs.SelectedIndex = 0;
+        MessageBox.Show(
+            this,
+            $"Import the current package for {string.Join(", ", _catalogDriftPackages)} and select Device / AMS catalog or Both. BFI will generate only the active profiles that are missing.",
+            "Restore Device / AMS profiles",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 
     private void BuildCurrentGroups()
@@ -899,6 +972,7 @@ public partial class MainWindow : Window
                 var baseRequired = destination != ImportDestination.ProjectLibrary;
                 var baseCovered = !baseRequired || _currentFilaments.Any(entry =>
                     entry.StorageKind == FilamentStorageKind.SystemCatalog
+                    && PrinterProfileExpander.IsActiveEntry(entry, FilamentStorageKind.SystemCatalog)
                     && entry.Name.Equals(baseName, StringComparison.OrdinalIgnoreCase));
                 var coveredTargets = selectedTargets.Count(target =>
                     PrinterProfileExpander.IsTargetCovered(profile, target, _currentFilaments, destination));
@@ -955,13 +1029,16 @@ public partial class MainWindow : Window
         var firstLoad = _printerTargets.Count == 0;
         _printerTargets.Clear();
 
-        foreach (var target in new PrinterDiscoveryService(_paths).DiscoverConfiguredPrinters())
+        var discovery = new PrinterDiscoveryService(_paths).Discover();
+        foreach (var target in discovery.Printers)
         {
             target.IsSelected = firstLoad || selectedKeys.Contains(target.Vendor + "|" + target.ModelName);
             _printerTargets.Add(target);
         }
 
-        Log($"Read {_printerTargets.Count} enabled machine preset group(s) from local Bambu Studio files.");
+        PrinterDiscoveryStatusText.Text = discovery.Status;
+        var source = discovery.UsesRegisteredDevices ? "registered local device records" : "enabled machine preset fallback";
+        Log($"Read {_printerTargets.Count} target printer model(s) from {source}.");
     }
 
     private void ResetSelectionState()
@@ -994,9 +1071,51 @@ public partial class MainWindow : Window
         CurrentSelectionTitle.Text = "Select a manufacturer, filament, or printer profile";
     }
 
-    private void RefreshBambuStatus()
+    private void StudioMonitor_Tick(object? sender, EventArgs e)
     {
-        if (BambuProcess.IsStudioRunning())
+        var isRunning = BambuProcess.IsStudioRunning();
+        if (_lastStudioRunning == isRunning)
+        {
+            return;
+        }
+
+        var wasRunning = _lastStudioRunning;
+        RefreshBambuStatus(isRunning);
+        if (isRunning)
+        {
+            Log("Bambu Studio opened; BFI write operations are locked.");
+            ShowStudioOpenWarning();
+            return;
+        }
+
+        if (wasRunning == true)
+        {
+            ClearCurrentEditor();
+            _settingsService.InvalidateIndex();
+            LoadCurrentLibrary();
+            LoadPrinterTargets();
+            MarkDuplicates(autoSkipDuplicates: false);
+            Log("Bambu Studio closed; local printer records and libraries were refreshed.");
+        }
+    }
+
+    private void ShowStudioOpenWarning()
+    {
+        MessageBox.Show(
+            this,
+            "Bambu Studio is open. BFI has locked its workspace to protect the active library. Close Bambu Studio to continue; BFI will detect it automatically.",
+            "Close Bambu Studio",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+    }
+
+    private void RefreshBambuStatus(bool? knownState = null)
+    {
+        var isRunning = knownState ?? BambuProcess.IsStudioRunning();
+        _lastStudioRunning = isRunning;
+        WorkspacePanel.IsEnabled = !isRunning;
+        LibraryActionBar.IsEnabled = !isRunning;
+        if (isRunning)
         {
             BambuStatusText.Text = "Bambu Studio is open";
             BambuStatusText.Foreground = ThemeService.Brush("DangerBrush");
