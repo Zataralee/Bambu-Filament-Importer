@@ -35,7 +35,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.7" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.8" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -49,6 +49,18 @@ public partial class MainWindow : Window
             $"Installed: {_paths.ProgramProfileRoot}";
         CurrentTree.ItemsSource = _currentGroups;
         PrinterList.ItemsSource = _printerTargets;
+        try
+        {
+            var seededLibraries = ManufacturerLibraryStore.SeedBundledLibraries();
+            if (seededLibraries > 0)
+            {
+                Log($"Added {seededLibraries} bundled manufacturer package(s) to the managed library folder.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Bundled manufacturer libraries could not be initialized: {ex.Message}");
+        }
         LoadPrinterTargets();
         RefreshBambuStatus();
         LoadCurrentLibrary();
@@ -125,7 +137,7 @@ public partial class MainWindow : Window
         LibraryUpdateButton.IsEnabled = false;
         UpdateButton.IsEnabled = false;
         LibraryUpdateButton.Content = "Checking...";
-        var libraryDirectory = Path.Combine(AppContext.BaseDirectory, "Manufacturer Libraries");
+        var libraryDirectory = ManufacturerLibraryStore.ManagedDirectory;
         try
         {
             using var service = new ManufacturerLibraryUpdateService();
@@ -414,7 +426,10 @@ public partial class MainWindow : Window
         var dialog = new OpenFileDialog
         {
             Filter = "Bambu filament libraries (*.bflib)|*.bflib|All files (*.*)|*.*",
-            Title = "Open filament library"
+            Title = "Open filament library",
+            InitialDirectory = Directory.Exists(ManufacturerLibraryStore.ManagedDirectory)
+                ? ManufacturerLibraryStore.ManagedDirectory
+                : null
         };
 
         if (dialog.ShowDialog(this) != true)
@@ -931,12 +946,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var packageFolders = new[]
-            {
-                Path.Combine(AppContext.BaseDirectory, "Manufacturer Libraries"),
-                Path.Combine(AppContext.BaseDirectory, "packages", "manufacturers")
-            };
-            var packages = packageFolders
+            var packages = ManufacturerLibraryStore.DiscoveryDirectories()
                 .Where(Directory.Exists)
                 .SelectMany(folder => Directory.EnumerateFiles(folder, "*.bflib", SearchOption.TopDirectoryOnly))
                 .DistinctBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)

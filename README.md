@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.7 | By Zataralee**
+**Version 0.4.8 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -52,6 +52,7 @@ Official source references and catalog policy are documented in [catalogs/README
 - Monitors Bambu Studio continuously, locks the workspace whenever it opens, and refreshes local records when it closes.
 - Detects packaged profiles left only in an inactive Program Files mirror after a Bambu catalog refresh and loads the affected package for repair.
 - Checks and installs manufacturer library updates independently from application updates, with package hashes and rollback protection.
+- Keeps one managed manufacturer library folder in Local AppData so portable BFI copies do not create competing catalogs in Downloads or other launch folders.
 - Checks GitHub Releases and installs confirmed updates in place.
 - Supports persistent light and dark modes.
 
@@ -65,7 +66,7 @@ BFI does not connect to Bambu printers or Bambu Cloud and does not read account 
 2. Close Bambu Studio.
 3. Start `BambuFilamentImporter.exe`.
 4. Open the **Import Package** tab and select **Import Filament Package**.
-5. Choose a `.bflib` file from the included `Manufacturer Libraries` folder.
+5. Choose a `.bflib` file from the managed `Manufacturer Libraries` folder opened by BFI.
 6. Select the destination and target printer models, review duplicates, and install.
 
 Program Files mirroring requires Administrator access. Normal roaming-catalog and Project Library imports do not.

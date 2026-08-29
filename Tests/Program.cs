@@ -162,11 +162,19 @@ var testPaths = new BambuPaths(roaming, program);
 try
 {
     var libraryUpdateFolder = Path.Combine(sandbox, "Manufacturer Libraries");
-    Directory.CreateDirectory(libraryUpdateFolder);
+    var bundledLibraryFolder = Path.Combine(sandbox, "Bundled Manufacturer Libraries");
+    Directory.CreateDirectory(bundledLibraryFolder);
     var indexedSunlu = manufacturerIndex.Packages.First(entry => entry.FileName == "SUNLU.bflib");
     var indexedOverture = manufacturerIndex.Packages.First(entry => entry.FileName == "Overture.bflib");
-    File.Copy(Path.Combine(projectRoot, "packages", "manufacturers", indexedSunlu.FileName),
-        Path.Combine(libraryUpdateFolder, indexedSunlu.FileName));
+    foreach (var entry in new[] { indexedSunlu, indexedOverture })
+    {
+        File.Copy(Path.Combine(projectRoot, "packages", "manufacturers", entry.FileName),
+            Path.Combine(bundledLibraryFolder, entry.FileName));
+    }
+    Check(ManufacturerLibraryStore.SeedBundledLibraries(libraryUpdateFolder, bundledLibraryFolder) == 2
+        && ManufacturerLibraryStore.SeedBundledLibraries(libraryUpdateFolder, bundledLibraryFolder) == 0,
+        "bundled libraries seed managed folder once");
+    File.Delete(Path.Combine(libraryUpdateFolder, indexedOverture.FileName));
     var updateIndex = new ManufacturerLibraryIndex
     {
         Format = "bfi-manufacturer-library-index",

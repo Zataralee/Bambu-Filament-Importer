@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.8 - 2026-08-29
+
+- Moved active manufacturer packages to one managed Local AppData folder shared by every portable BFI copy.
+- Seeded the managed folder once from bundled release packages and opened package selection there by default.
+- Prevented application location, including Downloads, from creating competing manufacturer library locations.
+
 ## 0.4.7 - 2026-08-29
 
 - Added a separate Update libraries action that checks manufacturer packages independently from the BFI application version.
