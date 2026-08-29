@@ -173,7 +173,7 @@ public sealed class BambuInstaller
             }
         }
 
-        MigrateDependentInheritance(profileRoot, filamentList, proposedProfiles, replacedBaseNames);
+        MigrateDependentInheritance(profileRoot, filamentList, proposedProfiles, replacedBaseNames, updatedEntries);
         ValidateManifestEntries(filamentList, manifestPath);
         BambuCatalogIntegrity.ValidateProfileRoot(profileRoot, manifest, proposedProfiles);
 
@@ -234,7 +234,8 @@ public sealed class BambuInstaller
         string profileRoot,
         JsonArray filamentList,
         Dictionary<string, string> proposedProfiles,
-        IReadOnlyDictionary<string, string> replacedBaseNames)
+        IReadOnlyDictionary<string, string> replacedBaseNames,
+        List<string> updatedEntries)
     {
         if (replacedBaseNames.Count == 0)
         {
@@ -274,6 +275,21 @@ public sealed class BambuInstaller
             }
 
             profile!["inherits"] = replacement;
+            var oldProductName = CurrentFilamentEntry.GetProductName(inherits);
+            var newProductName = CurrentFilamentEntry.GetProductName(replacement);
+            var profileName = profile["name"]?.GetValue<string>() ?? GetManifestString(item, "name");
+            if (CurrentFilamentEntry.GetProductName(profileName).Equals(oldProductName, StringComparison.OrdinalIgnoreCase))
+            {
+                var suffix = profileName[oldProductName.Length..];
+                var replacementName = newProductName + suffix;
+                profile["name"] = replacementName;
+                item["name"] = replacementName;
+                if (!updatedEntries.Contains(replacementName, StringComparer.OrdinalIgnoreCase))
+                {
+                    updatedEntries.Add(replacementName);
+                }
+            }
+
             proposedProfiles[relativePath] = profile.ToJsonString(WriteOptions) + Environment.NewLine;
         }
     }

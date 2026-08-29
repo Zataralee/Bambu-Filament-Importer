@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.5 - 2026-08-29
+
+- Fixed P1S AMS visibility by generating P1-family profiles for both P1S and P1P live-device identities while retaining the selected printer target.
+- Eliminated blank filament menu entries by giving products that exactly matched their vendor group an explicit `Basic` product name and migrating matching child aliases.
+- Normalized SUNLU vendor groups, including removal of a leaked `SUNLU ABS TEST` value from the packaged catalog.
+- Changed the inactive-mirror warning into a repair action that loads the affected manufacturer package with active catalog gaps selected.
+- Added package-wide visible-alias and P1 runtime compatibility regression coverage.
+
 ## 0.4.4 - 2026-08-29
 
 - Fixed target discovery so locally registered printer records take precedence over unrelated or stale enabled machine presets.

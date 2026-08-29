@@ -41,6 +41,19 @@ Check(AmsFilamentId.Read(mattePetgJson) == "GFSNL194", "P1S AMS round-trip ID re
 Check(manufacturerPackages.All(item => item.Manifest.PrinterNeutral), "all manufacturer packages printer-neutral");
 Check(manufacturerPackages.SelectMany(item => item.ProfileJsonByPath.Values)
     .All(json => !json.Contains("compatible_printers", StringComparison.OrdinalIgnoreCase)), "no printer dependency in package payloads");
+var blankDisplayAliases = manufacturerPackages
+    .SelectMany(package => package.Manifest.Profiles.Select(profile => new { Package = package, Profile = profile }))
+    .Where(item => item.Profile.Name.EndsWith("@base", StringComparison.OrdinalIgnoreCase))
+    .Where(item =>
+    {
+        var json = JsonNode.Parse(item.Package.ProfileJsonByPath[item.Profile.RelativePath])!.AsObject();
+        var vendor = json["filament_vendor"]?[0]?.GetValue<string>() ?? item.Profile.VendorGroup;
+        return CurrentFilamentEntry.GetProductName(item.Profile.Name)
+            .Equals(vendor, StringComparison.OrdinalIgnoreCase);
+    })
+    .Select(item => item.Profile.Name)
+    .ToList();
+Check(blankDisplayAliases.Count == 0, "all package filament aliases remain visible");
 
 var livePaths = new BambuPaths();
 BambuCatalogIntegrity.ValidateProfileRoot(livePaths.RoamingProfileRoot);
@@ -85,6 +98,12 @@ var partialLibrary = new List<CurrentFilamentEntry>
         Name = "Overture ABS @BBL X1C",
         StorageKind = FilamentStorageKind.SystemCatalog,
         CompatiblePrinters = [.. x1cTarget.MachinePresetNames]
+    },
+    new()
+    {
+        Name = "Overture ABS @BBL P1S",
+        StorageKind = FilamentStorageKind.SystemCatalog,
+        CompatiblePrinters = [.. p1sTarget.MachinePresetNames]
     }
 };
 var gapExpansion = PrinterProfileExpander.Expand(
@@ -94,7 +113,7 @@ var gapExpansion = PrinterProfileExpander.Expand(
     ImportDestination.DeviceAms);
 Check(gapExpansion.Manifest.Profiles.Count == 2, "only missing printer coverage generated");
 Check(!gapExpansion.Manifest.Profiles.First(profile => profile.Name.EndsWith("@base")).IsSelected, "existing base profile preserved");
-Check(gapExpansion.Manifest.Profiles.Any(profile => profile.Name.EndsWith("@BBL P1S") && profile.IsSelected), "missing P1S coverage selected");
+Check(gapExpansion.Manifest.Profiles.Any(profile => profile.Name.EndsWith("@BBL P1S") && profile.IsSelected), "incomplete P1 runtime coverage selected");
 Check(gapExpansion.Manifest.Profiles.All(profile => !profile.Name.EndsWith("@BBL X1C")), "covered X1C profile not duplicated");
 var installedMirrorOnly = partialLibrary.Select(entry => new CurrentFilamentEntry
 {
@@ -235,7 +254,14 @@ try
     Check(neutralResult.WrittenFiles.Count == 2, "dynamic per-printer profile install");
     var dynamicChildPath = Path.Combine(roaming, "system", "BBL", "filament", "Overture", "Overture ABS @BBL P1S.json");
     var dynamicChild = JsonNode.Parse(File.ReadAllText(dynamicChildPath))!.AsObject();
-    Check(dynamicChild["compatible_printers"]?.AsArray().Count == 2, "selected nozzle variants written");
+    var dynamicCompatiblePrinters = dynamicChild["compatible_printers"]!.AsArray()
+        .Select(node => node!.GetValue<string>())
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    Check(dynamicCompatiblePrinters.Count == 4
+        && dynamicCompatiblePrinters.Contains("Bambu Lab P1S 0.4 nozzle")
+        && dynamicCompatiblePrinters.Contains("Bambu Lab P1S 0.6 nozzle")
+        && dynamicCompatiblePrinters.Contains("Bambu Lab P1P 0.4 nozzle")
+        && dynamicCompatiblePrinters.Contains("Bambu Lab P1P 0.6 nozzle"), "P1 AMS runtime aliases written");
     var settingsService = new FilamentSettingsService(testPaths);
     var testSettings = settingsService.Load(testChild);
     var bedTemperature = testSettings.First(setting => setting.Key == "hot_plate_temp");
@@ -310,11 +336,12 @@ try
     var repairedManifest = JsonNode.Parse(File.ReadAllText(Path.Combine(collisionRoaming, "system", "BBL.json")))!["filament_list"]!.AsArray();
     Check(repairedManifest.Count == 7, "complete catalog retained during alias import");
     Check(repairedManifest.Any(item => item?["name"]?.GetValue<string>() == "SUNLU Marble PLA @base"), "selected canonical manifest name retained");
-    Check(collisionResult.ManifestEntriesUpdated.Count == 2, "catalog collision updates reported");
+    Check(collisionResult.ManifestEntriesUpdated.Count == 6, "catalog collision updates reported");
     var repairedChild = JsonNode.Parse(File.ReadAllText(Path.Combine(collisionRoaming, "system", "BBL", "filament", "SUNLU", "SUNLU Marble PLA @BBL A1.json")))!.AsObject();
     Check(repairedChild["inherits"]?.GetValue<string>() == "SUNLU Marble PLA @base", "canonical inheritance retained");
     var migratedSibling = JsonNode.Parse(File.ReadAllText(Path.Combine(collisionSunlu, "SUNLU Marble PLA @BBL A1M.json")))!.AsObject();
     Check(migratedSibling["inherits"]?.GetValue<string>() == "SUNLU Marble PLA @base", "unselected sibling inheritance migrated");
+    Check(migratedSibling["name"]?.GetValue<string>() == "SUNLU Marble PLA @BBL A1M", "unselected sibling alias migrated");
     BambuCatalogIntegrity.ValidateProfileRoot(Path.Combine(collisionRoaming, "system"));
     Check(true, "full alias catalog remains loadable");
 
@@ -412,13 +439,16 @@ try
         .ToList();
     Check(new BambuLibraryEditor(testPaths).RemoveMany(deviceProfiles) == 2, "filament-level removal");
 
-    var screenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow.png");
-    var libraryScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "CurrentLibrary.png");
-    var darkScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow-Dark.png");
-    RenderWindow(screenshotPath, libraryScreenshotPath, darkScreenshotPath);
-    Check(File.Exists(screenshotPath) && new FileInfo(screenshotPath).Length > 50_000, "main window render");
-    Check(File.Exists(libraryScreenshotPath) && new FileInfo(libraryScreenshotPath).Length > 50_000, "settings window render");
-    Check(File.Exists(darkScreenshotPath) && new FileInfo(darkScreenshotPath).Length > 50_000, "dark mode render");
+    if (!string.Equals(Environment.GetEnvironmentVariable("BFI_SKIP_UI_RENDER"), "1", StringComparison.Ordinal))
+    {
+        var screenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow.png");
+        var libraryScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "CurrentLibrary.png");
+        var darkScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow-Dark.png");
+        RenderWindow(screenshotPath, libraryScreenshotPath, darkScreenshotPath);
+        Check(File.Exists(screenshotPath) && new FileInfo(screenshotPath).Length > 50_000, "main window render");
+        Check(File.Exists(libraryScreenshotPath) && new FileInfo(libraryScreenshotPath).Length > 50_000, "settings window render");
+        Check(File.Exists(darkScreenshotPath) && new FileInfo(darkScreenshotPath).Length > 50_000, "dark mode render");
+    }
 
     Console.WriteLine("All smoke tests passed.");
 }

@@ -29,12 +29,13 @@ public partial class MainWindow : Window
     private FilamentProfileEntry? _selectedPackageProfile;
     private bool? _lastStudioRunning;
     private List<string> _catalogDriftPackages = [];
+    private List<string> _catalogDriftPackagePaths = [];
 
     public MainWindow()
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.4" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.5" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -335,29 +336,34 @@ public partial class MainWindow : Window
 
         try
         {
-            DetachPackageEvents();
-            _package = PackageReader.Load(dialog.FileName);
-            foreach (var profile in _package.Manifest.Profiles)
-            {
-                profile.PropertyChanged += PackageProfile_PropertyChanged;
-            }
-
-            PackagePathText.Text = dialog.FileName;
-            MarkDuplicates(autoSkipDuplicates: true);
-            PackageGrid.ItemsSource = _package.Manifest.Profiles;
-            MainTabs.SelectedIndex = 0;
-            UpdateSummary();
-            RefreshBambuStatus();
-            Log($"Loaded {_package.Manifest.DisplayName}.");
-            if (_package.Manifest.SourceUrls.Count > 0)
-            {
-                Log($"Package includes {_package.Manifest.SourceUrls.Count} official manufacturer source link(s).");
-            }
+            LoadPackage(dialog.FileName);
         }
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "Package could not be opened", MessageBoxButton.OK, MessageBoxImage.Error);
             Log(ex.Message);
+        }
+    }
+
+    private void LoadPackage(string path)
+    {
+        DetachPackageEvents();
+        _package = PackageReader.Load(path);
+        foreach (var profile in _package.Manifest.Profiles)
+        {
+            profile.PropertyChanged += PackageProfile_PropertyChanged;
+        }
+
+        PackagePathText.Text = path;
+        MarkDuplicates(autoSkipDuplicates: true);
+        PackageGrid.ItemsSource = _package.Manifest.Profiles;
+        MainTabs.SelectedIndex = 0;
+        UpdateSummary();
+        RefreshBambuStatus();
+        Log($"Loaded {_package.Manifest.DisplayName}.");
+        if (_package.Manifest.SourceUrls.Count > 0)
+        {
+            Log($"Package includes {_package.Manifest.SourceUrls.Count} official manufacturer source link(s).");
         }
     }
 
@@ -858,6 +864,7 @@ public partial class MainWindow : Window
                 .Select(package => new
                 {
                     package.Manifest.DisplayName,
+                    package.FilePath,
                     Count = package.Manifest.Profiles.Count(profile => mirrorOnlyNames.Contains(profile.Name))
                 })
                 .Where(item => item.Count > 0)
@@ -865,6 +872,7 @@ public partial class MainWindow : Window
                 .ToList();
 
             _catalogDriftPackages = affected.Select(item => item.DisplayName).ToList();
+            _catalogDriftPackagePaths = affected.Select(item => item.FilePath).ToList();
             var missingProfiles = affected.Sum(item => item.Count);
             CatalogDriftWarningPanel.Visibility = missingProfiles > 0 ? Visibility.Visible : Visibility.Collapsed;
             CatalogDriftStatusText.Text = missingProfiles == 0
@@ -873,6 +881,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            _catalogDriftPackages = [];
+            _catalogDriftPackagePaths = [];
             CatalogDriftWarningPanel.Visibility = Visibility.Collapsed;
             Log($"Catalog drift audit failed: {ex.Message}");
         }
@@ -880,13 +890,21 @@ public partial class MainWindow : Window
 
     private void ReviewCatalogDrift_Click(object sender, RoutedEventArgs e)
     {
-        MainTabs.SelectedIndex = 0;
-        MessageBox.Show(
-            this,
-            $"Import the current package for {string.Join(", ", _catalogDriftPackages)} and select Device / AMS catalog or Both. BFI will generate only the active profiles that are missing.",
-            "Restore Device / AMS profiles",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        if (_catalogDriftPackagePaths.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            LoadPackage(_catalogDriftPackagePaths[0]);
+            Log($"Loaded repair package for {_catalogDriftPackages[0]}; active gaps remain selected for review.");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Repair package could not be loaded", MessageBoxButton.OK, MessageBoxImage.Error);
+            Log(ex.ToString());
+        }
     }
 
     private void BuildCurrentGroups()

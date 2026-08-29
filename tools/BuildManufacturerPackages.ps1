@@ -7,6 +7,13 @@ $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $usedFilamentIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
+function Get-DisplaySafeName([string]$Name, [string]$Vendor) {
+    if ($Name.Equals($Vendor, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return "$Name Basic"
+    }
+    return $Name
+}
+
 function Get-Template([string]$Family) {
     switch -Regex ($Family) {
         '^ABS$' { return 'fdm_filament_abs' }
@@ -88,7 +95,7 @@ foreach ($manufacturer in $catalog.manufacturers) {
         $projectPresetNames = @()
 
         foreach ($product in $manufacturer.products) {
-            $name = [string]$product.name
+            $name = Get-DisplaySafeName ([string]$product.name) ([string]$manufacturer.manufacturer)
             $family = [string]$product.family
             $baseName = "$name @base"
             $stableKey = "$($manufacturer.manufacturer)|$name"
@@ -208,9 +215,25 @@ if (Test-Path -LiteralPath $sunluSource) {
         New-Item -ItemType Directory -Path $vendorFolder -Force | Out-Null
         $neutralProfiles = @()
         $baseEntries = @($sourceManifest.profiles | Where-Object { ([string]$_.name).EndsWith('@base') })
+        $sunluNameMap = @{
+            'SUNLU ABS @base'  = 'SUNLU Basic ABS @base'
+            'SUNLU ASA @base'  = 'SUNLU Basic ASA @base'
+            'SUNLU PETG @base' = 'SUNLU Basic PETG @base'
+            'SUNLU PLA @base'  = 'SUNLU Basic PLA @base'
+        }
+        $sunluVendorMap = @{
+            'ABS'  = 'SUNLU ABS'
+            'ASA'  = 'SUNLU ASA'
+            'PETG' = 'SUNLU PETG'
+            'PLA'  = 'SUNLU PLA'
+            'PA'   = 'SUNLU PA'
+            'TPU'  = 'SUNLU TPU'
+        }
         foreach ($baseEntry in $baseEntries) {
             $sourceBaseName = [string]$baseEntry.name
-            $baseName = if ($sourceBaseName -eq 'SUNLU Marble PLA @base') {
+            $baseName = if ($sunluNameMap.ContainsKey($sourceBaseName)) {
+                [string]$sunluNameMap[$sourceBaseName]
+            } elseif ($sourceBaseName -eq 'SUNLU Marble PLA @base') {
                 'SUNLU PLA Marble @base'
             } else {
                 $sourceBaseName
@@ -230,6 +253,24 @@ if (Test-Path -LiteralPath $sunluSource) {
 
             $baseJson.filament_id = Get-AmsSafeFilamentId ([string]$baseJson.filament_id) ([string]$baseEntry.name)
             $baseJson.name = $baseName
+            $materialFamily = [string]$baseEntry.materialFamily
+            $vendorKey = if ($materialFamily.StartsWith('PETG')) {
+                'PETG'
+            } elseif ($materialFamily.StartsWith('PLA')) {
+                'PLA'
+            } elseif ($materialFamily.StartsWith('PA')) {
+                'PA'
+            } elseif ($materialFamily.StartsWith('TPU')) {
+                'TPU'
+            } else {
+                $materialFamily
+            }
+            $vendorGroup = if ($sunluVendorMap.ContainsKey($vendorKey)) {
+                [string]$sunluVendorMap[$vendorKey]
+            } else {
+                'SUNLU'
+            }
+            $baseJson.filament_vendor = @($vendorGroup)
 
             $preferredChild = $sourceManifest.profiles | Where-Object {
                 ([string]$_.name).Equals(($sourceBaseName.Replace(' @base', ' @BBL X1C')))
@@ -259,8 +300,8 @@ if (Test-Path -LiteralPath $sunluSource) {
                 name = $baseName
                 relativePath = "filament/SUNLU/$fileName"
                 kind = 'system'
-                vendorGroup = [string]$baseEntry.vendorGroup
-                materialFamily = [string]$baseEntry.materialFamily
+                vendorGroup = $vendorGroup
+                materialFamily = $materialFamily
             }
         }
 

@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.4 | By Zataralee**
+**Version 0.4.5 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -39,6 +39,7 @@ Official source references and catalog policy are documented in [catalogs/README
 - Imports printer-neutral manufacturer libraries to selected Bambu Studio printer models.
 - Reads locally registered printer models from Bambu Studio and excludes unrelated enabled presets when device records are available.
 - Compares actual `compatible_printers` coverage and generates only missing profiles.
+- Handles Bambu's P1S/P1P live-device identity crossover so P1-family profiles remain visible in the AMS material picker.
 - Imports to the Device/AMS catalog, Project Library, or both.
 - Scans the current library as Manufacturer > Filament > printer profile.
 - Displays and edits direct and inherited temperatures, cooling, drying, flow, retraction, and calibration values.
@@ -49,7 +50,7 @@ Official source references and catalog policy are documented in [catalogs/README
 - Creates safety backups before changing Bambu Studio files.
 - Validates the complete catalog before and after installation and rolls back a failed write automatically.
 - Monitors Bambu Studio continuously, locks the workspace whenever it opens, and refreshes local records when it closes.
-- Detects packaged profiles left only in an inactive Program Files mirror after a Bambu catalog refresh.
+- Detects packaged profiles left only in an inactive Program Files mirror after a Bambu catalog refresh and loads the affected package for repair.
 - Checks GitHub Releases and installs confirmed updates in place.
 - Supports persistent light and dark modes.
 

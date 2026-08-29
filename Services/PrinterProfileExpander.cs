@@ -85,7 +85,7 @@ public static class PrinterProfileExpander
                     ["from"] = "system",
                     ["setting_id"] = "GFV" + GetCode(childName, 6),
                     ["instantiation"] = "true",
-                    ["compatible_printers"] = new JsonArray(target.MachinePresetNames.Select(name => JsonValue.Create(name)).ToArray())
+                    ["compatible_printers"] = new JsonArray(GetRuntimeCompatiblePrinterNames(target).Select(name => JsonValue.Create(name)).ToArray())
                 };
                 expandedManifest.Profiles.Add(CloneEntry(product, childName, childPath, isSelected: true));
                 expandedManifest.ProjectPresetNames.Add(childName);
@@ -139,6 +139,29 @@ public static class PrinterProfileExpander
             || entry.AdditionalCopies.Any(copy => copy.Source.StartsWith("Roaming", StringComparison.OrdinalIgnoreCase));
     }
 
+    public static IReadOnlyList<string> GetRuntimeCompatiblePrinterNames(PrinterTarget target)
+    {
+        var names = target.MachinePresetNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (target.Vendor.Equals("BBL", StringComparison.OrdinalIgnoreCase)
+            && (target.ModelName.Equals("Bambu Lab P1P", StringComparison.OrdinalIgnoreCase)
+                || target.ModelName.Equals("Bambu Lab P1S", StringComparison.OrdinalIgnoreCase)))
+        {
+            foreach (var name in target.MachinePresetNames.ToList())
+            {
+                if (name.StartsWith("Bambu Lab P1P ", StringComparison.OrdinalIgnoreCase))
+                {
+                    names.Add("Bambu Lab P1S " + name["Bambu Lab P1P ".Length..]);
+                }
+                else if (name.StartsWith("Bambu Lab P1S ", StringComparison.OrdinalIgnoreCase))
+                {
+                    names.Add("Bambu Lab P1P " + name["Bambu Lab P1S ".Length..]);
+                }
+            }
+        }
+
+        return names.Order(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     private static bool IsTargetCoveredInStorage(
         FilamentProfileEntry product,
         PrinterTarget target,
@@ -153,13 +176,14 @@ public static class PrinterProfileExpander
         var coveredMachines = matching
             .SelectMany(entry => entry.CompatiblePrinters)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (target.MachinePresetNames.All(coveredMachines.Contains))
+        if (GetRuntimeCompatiblePrinterNames(target).All(coveredMachines.Contains))
         {
             return true;
         }
 
         var expectedName = $"{productName} @{target.ProfileSuffix}";
-        return matching.Any(entry => entry.Name.Equals(expectedName, StringComparison.OrdinalIgnoreCase));
+        return matching.Any(entry => entry.Name.Equals(expectedName, StringComparison.OrdinalIgnoreCase)
+            && entry.CompatiblePrinters.Count == 0);
     }
 
     private static FilamentProfileEntry CloneEntry(FilamentProfileEntry source, string name, string path, bool isSelected) => new()
