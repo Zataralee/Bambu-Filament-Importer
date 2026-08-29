@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.5 | By Zataralee**
+**Version 0.4.6 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.6 - 2026-08-29
+
+- Made the inactive-mirror repair action select the Device/AMS destination before calculating active catalog gaps.
+
 ## 0.4.5 - 2026-08-29
 
 - Fixed P1S AMS visibility by generating P1-family profiles for both P1S and P1P live-device identities while retaining the selected printer target.

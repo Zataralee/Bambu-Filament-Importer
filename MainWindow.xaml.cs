@@ -35,7 +35,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.5" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.6" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -897,6 +897,7 @@ public partial class MainWindow : Window
 
         try
         {
+            DeviceAmsRadio.IsChecked = true;
             LoadPackage(_catalogDriftPackagePaths[0]);
             Log($"Loaded repair package for {_catalogDriftPackages[0]}; active gaps remain selected for review.");
         }
