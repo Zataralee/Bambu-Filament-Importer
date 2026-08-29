@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.3 - 2026-08-29
+
+- Fixed SUNLU Marble PLA imports that could leave Bambu's unselected printer profiles pointing at a renamed base preset.
+- Added complete proposed-catalog validation, dependent inheritance migration, post-write validation, and automatic rollback.
+- Corrected the SUNLU Marble preset name to match Bambu Studio's existing system catalog while retaining its established file path.
+- Added a Check for updates button with confirmed download, in-place installation, and automatic restart from GitHub Releases.
+- Clarified that machine targets come from local Bambu Studio preset files and are not connected printers or account devices.
+- Added regression coverage for fresh alias collisions and repair of catalogs affected by 0.4.2.
+
 ## 0.4.2 - 2026-08-24
 
 - Fixed AMS-to-project synchronization for manufacturer IDs longer than the printer's eight-character limit.

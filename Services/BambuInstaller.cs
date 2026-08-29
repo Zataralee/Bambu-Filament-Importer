@@ -94,22 +94,20 @@ public sealed class BambuInstaller
             throw new FileNotFoundException("Bambu profile manifest was not found.", manifestPath);
         }
 
-        Backup(manifestPath, result);
+        var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject()
+            ?? throw new InvalidDataException($"Bambu profile manifest could not be read: {manifestPath}");
+        var filamentList = manifest["filament_list"]?.AsArray()
+            ?? throw new InvalidDataException($"Bambu profile manifest has no filament_list: {manifestPath}");
+        var proposedProfiles = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var profile in selectedProfiles)
         {
             var relativePath = BuildProfileRelativePath(profile);
-            var destination = Path.Combine(profileRoot, "BBL", relativePath.Replace('/', Path.DirectorySeparatorChar));
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            if (File.Exists(destination))
-            {
-                Backup(destination, result);
-            }
-            File.WriteAllText(destination, BuildProfileJson(package, profile, nameMap));
-            result.WrittenFiles.Add(destination);
+            proposedProfiles[NormalizeRelativePath(relativePath)] = BuildProfileJson(package, profile, nameMap);
         }
 
-        var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))!.AsObject();
-        var filamentList = manifest["filament_list"]!.AsArray();
+        var addedEntries = new List<string>();
+        var updatedEntries = new List<string>();
+        var replacedBaseNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var profile in selectedProfiles)
         {
@@ -131,8 +129,19 @@ public sealed class BambuInstaller
                     ["name"] = profile.Name,
                     ["sub_path"] = relativePath
                 });
-                result.ManifestEntriesAdded.Add(profile.Name);
+                addedEntries.Add(profile.Name);
                 continue;
+            }
+
+            if (profile.Name.EndsWith("@base", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var existingName in matchingEntries
+                    .Select(item => GetManifestString(item, "name"))
+                    .Where(name => name.EndsWith("@base", StringComparison.OrdinalIgnoreCase)
+                        && !name.Equals(profile.Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    replacedBaseNames[existingName] = profile.Name;
+                }
             }
 
             var keeper = matchingEntries.FirstOrDefault(item =>
@@ -160,13 +169,132 @@ public sealed class BambuInstaller
 
             if (changed)
             {
-                result.ManifestEntriesUpdated.Add(profile.Name);
+                updatedEntries.Add(profile.Name);
             }
         }
 
+        MigrateDependentInheritance(profileRoot, filamentList, proposedProfiles, replacedBaseNames);
         ValidateManifestEntries(filamentList, manifestPath);
+        BambuCatalogIntegrity.ValidateProfileRoot(profileRoot, manifest, proposedProfiles);
 
-        File.WriteAllText(manifestPath, manifest.ToJsonString(WriteOptions) + Environment.NewLine);
+        var profileWrites = proposedProfiles.ToDictionary(
+            pair => Path.Combine(profileRoot, "BBL", pair.Key.Replace('/', Path.DirectorySeparatorChar)),
+            pair => pair.Value,
+            StringComparer.OrdinalIgnoreCase);
+        var originalFiles = profileWrites.Keys
+            .Append(manifestPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                path => path,
+                path => File.Exists(path) ? File.ReadAllBytes(path) : null,
+                StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            Backup(manifestPath, result);
+            foreach (var destination in profileWrites.Keys.Where(File.Exists))
+            {
+                Backup(destination, result);
+            }
+
+            foreach (var (destination, json) in profileWrites)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                File.WriteAllText(destination, json);
+            }
+
+            File.WriteAllText(manifestPath, manifest.ToJsonString(WriteOptions) + Environment.NewLine);
+            BambuCatalogIntegrity.ValidateProfileRoot(profileRoot);
+        }
+        catch (Exception writeError)
+        {
+            try
+            {
+                RestoreOriginalFiles(originalFiles);
+            }
+            catch (Exception restoreError)
+            {
+                throw new AggregateException(
+                    "The Bambu catalog update failed and its automatic rollback also failed. Use the .bflib-backup files beside the affected profiles to restore the catalog.",
+                    writeError,
+                    restoreError);
+            }
+
+            throw new IOException(
+                "The Bambu catalog update failed. All files changed by this import were restored automatically.",
+                writeError);
+        }
+
+        result.WrittenFiles.AddRange(profileWrites.Keys);
+        result.ManifestEntriesAdded.AddRange(addedEntries);
+        result.ManifestEntriesUpdated.AddRange(updatedEntries);
+    }
+
+    private static void MigrateDependentInheritance(
+        string profileRoot,
+        JsonArray filamentList,
+        Dictionary<string, string> proposedProfiles,
+        IReadOnlyDictionary<string, string> replacedBaseNames)
+    {
+        if (replacedBaseNames.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var item in filamentList.OfType<JsonObject>())
+        {
+            var relativePath = NormalizeRelativePath(GetManifestString(item, "sub_path"));
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                continue;
+            }
+
+            string json;
+            if (proposedProfiles.TryGetValue(relativePath, out var proposedJson))
+            {
+                json = proposedJson;
+            }
+            else
+            {
+                var profilePath = Path.Combine(profileRoot, "BBL", relativePath.Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(profilePath))
+                {
+                    continue;
+                }
+
+                json = File.ReadAllText(profilePath);
+            }
+
+            var profile = JsonNode.Parse(json)?.AsObject();
+            var inherits = profile?["inherits"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(inherits)
+                || !replacedBaseNames.TryGetValue(inherits, out var replacement))
+            {
+                continue;
+            }
+
+            profile!["inherits"] = replacement;
+            proposedProfiles[relativePath] = profile.ToJsonString(WriteOptions) + Environment.NewLine;
+        }
+    }
+
+    private static void RestoreOriginalFiles(IReadOnlyDictionary<string, byte[]?> originalFiles)
+    {
+        foreach (var (path, contents) in originalFiles)
+        {
+            if (contents is null)
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+
+                continue;
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllBytes(path, contents);
+        }
     }
 
     private static string GetManifestString(JsonObject item, string propertyName)
@@ -274,8 +402,10 @@ public sealed class BambuInstaller
 
     private static string BuildProfileRelativePath(FilamentProfileEntry profile)
     {
-        var directory = Path.GetDirectoryName(profile.OriginalRelativePath.Replace('/', Path.DirectorySeparatorChar)) ?? "";
-        return Path.Combine(directory, profile.Name + ".json").Replace('\\', '/');
+        var path = string.IsNullOrWhiteSpace(profile.RelativePath)
+            ? profile.OriginalRelativePath
+            : profile.RelativePath;
+        return NormalizeRelativePath(path);
     }
 
     private static string BuildProfileJson(LoadedFilamentPackage package, FilamentProfileEntry profile, Dictionary<string, string> nameMap)

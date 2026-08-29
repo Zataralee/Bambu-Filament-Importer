@@ -29,7 +29,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.2" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.3" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -46,6 +46,59 @@ public partial class MainWindow : Window
         LoadPrinterTargets();
         RefreshBambuStatus();
         LoadCurrentLibrary();
+    }
+
+    private async void CheckForUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateButton.IsEnabled = false;
+        UpdateButton.Content = "Checking...";
+        try
+        {
+            var release = await UpdateService.CheckAsync();
+            if (!UpdateService.IsNewer(release))
+            {
+                MessageBox.Show(
+                    this,
+                    $"Version {UpdateService.CurrentVersion.ToString(3)} is current.",
+                    "No update available",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var answer = MessageBox.Show(
+                this,
+                $"Version {release.Version.ToString(3)} is available on GitHub.{Environment.NewLine}{Environment.NewLine}" +
+                "Download and install it now? The importer will close and reopen automatically.",
+                "Update available",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            UpdateButton.Content = "Downloading...";
+            var stagedExecutable = await UpdateService.DownloadAndExtractAsync(release);
+            UpdateButton.Content = "Installing...";
+            UpdateService.LaunchUpdater(stagedExecutable);
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                ex.Message + Environment.NewLine + Environment.NewLine + "You can also download the latest release directly from GitHub.",
+                "Update check failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Log(ex.ToString());
+        }
+        finally
+        {
+            UpdateButton.Content = "Check for updates";
+            UpdateButton.IsEnabled = true;
+        }
     }
 
     private void RefreshLibrary_Click(object sender, RoutedEventArgs e)
@@ -320,7 +373,7 @@ public partial class MainWindow : Window
             Log($"Installed {_package.Manifest.DisplayName} to {DestinationLabel(destination)}.");
             if (_package.Manifest.PrinterNeutral)
             {
-                Log($"Generated profiles for {selectedPrinters.Count} configured printer model(s).");
+                Log($"Generated profiles for {selectedPrinters.Count} locally enabled machine preset group(s).");
             }
             Log($"Wrote {result.WrittenFiles.Count} profile files.");
             if (result.UserPresetEntriesWritten.Count > 0)
@@ -908,7 +961,7 @@ public partial class MainWindow : Window
             _printerTargets.Add(target);
         }
 
-        Log($"Detected {_printerTargets.Count} configured printer model(s) from Bambu Studio.");
+        Log($"Read {_printerTargets.Count} enabled machine preset group(s) from local Bambu Studio files.");
     }
 
     private void ResetSelectionState()

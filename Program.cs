@@ -7,6 +7,29 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        if (args.Length == 4 && args[0].Equals("--apply-update", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                return UpdateService.ApplyUpdate(args[1], args[2], int.Parse(args[3]));
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(
+                    ex.Message,
+                    "Update failed",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
+                return 2;
+            }
+        }
+
+        if (args.Length == 2 && args[0].Equals("--update-complete", StringComparison.OrdinalIgnoreCase))
+        {
+            UpdateService.IsRestartAfterUpdate = true;
+            UpdateService.PendingCleanupDirectory = args[1];
+        }
+
         if (args.Length == 2 && args[0].Equals("--elevated-remove", StringComparison.OrdinalIgnoreCase))
         {
             return ElevationService.ExecuteRemovalPlan(args[1]);

@@ -56,7 +56,7 @@ public static class PrinterProfileExpander
                 ? product.Name
                 : product.Name + " @base";
             baseJson["name"] = baseName;
-            var basePath = BuildSiblingPath(product.RelativePath, baseName);
+            var basePath = product.RelativePath;
             var overwriteExisting = product.IsDuplicate;
             var baseExists = currentEntries?.Any(entry =>
                 entry.StorageKind == FilamentStorageKind.SystemCatalog
@@ -75,7 +75,7 @@ public static class PrinterProfileExpander
 
                 var productName = CurrentFilamentEntry.GetProductName(baseName);
                 var childName = $"{productName} @{target.ProfileSuffix}";
-                var childPath = BuildSiblingPath(product.RelativePath, childName);
+                var childPath = BuildPrinterPath(product.RelativePath, target.ProfileSuffix, childName);
                 var child = new JsonObject
                 {
                     ["type"] = "filament",
@@ -156,11 +156,17 @@ public static class PrinterProfileExpander
         MaterialFamily = source.MaterialFamily
     };
 
-    private static string BuildSiblingPath(string originalPath, string name)
+    private static string BuildPrinterPath(string originalPath, string profileSuffix, string fallbackName)
     {
         var normalized = originalPath.Replace('\\', '/');
         var slash = normalized.LastIndexOf('/');
-        return (slash >= 0 ? normalized[..(slash + 1)] : "") + name + ".json";
+        var directory = slash >= 0 ? normalized[..(slash + 1)] : "";
+        var fileName = slash >= 0 ? normalized[(slash + 1)..] : normalized;
+        var stem = fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? fileName[..^5] : fileName;
+        var marker = stem.LastIndexOf(" @base", StringComparison.OrdinalIgnoreCase);
+        return marker >= 0
+            ? $"{directory}{stem[..marker]} @{profileSuffix}.json"
+            : $"{directory}{fallbackName}.json";
     }
 
     private static string GetCode(string text, int length)

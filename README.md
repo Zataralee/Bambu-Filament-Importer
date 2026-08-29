@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.2 | By Zataralee**
+**Version 0.4.3 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -37,7 +37,7 @@ Official source references and catalog policy are documented in [catalogs/README
 ## Features
 
 - Imports printer-neutral manufacturer libraries to selected Bambu Studio printer models.
-- Detects configured printer models and nozzle sizes from the user's installation.
+- Reads enabled machine models and nozzle sizes from the user's local Bambu Studio configuration.
 - Compares actual `compatible_printers` coverage and generates only missing profiles.
 - Imports to the Device/AMS catalog, Project Library, or both.
 - Scans the current library as Manufacturer > Filament > printer profile.
@@ -47,8 +47,12 @@ Official source references and catalog policy are documented in [catalogs/README
 - Audits and repairs AMS filament IDs that are too long or collide after printer synchronization.
 - Creates complete `.bflbackup` library backups and merges them during restoration.
 - Creates safety backups before changing Bambu Studio files.
+- Validates the complete catalog before and after installation and rolls back a failed write automatically.
 - Refuses write operations while Bambu Studio is running.
+- Checks GitHub Releases and installs confirmed updates in place.
 - Supports persistent light and dark modes.
+
+BFI does not connect to Bambu printers or Bambu Cloud and does not read account credentials. Network access is used only when the user selects **Check for updates**, and the request goes to this repository's GitHub Releases API.
 
 ![Bambu Filament Importer dark mode](docs/images/main-window-dark.png)
 

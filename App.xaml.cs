@@ -9,7 +9,7 @@ public partial class App : Application
 {
     private void Application_Startup(object sender, StartupEventArgs e)
     {
-        if (BambuProcess.IsAnotherImporterRunning())
+        if (!UpdateService.IsRestartAfterUpdate && BambuProcess.IsAnotherImporterRunning())
         {
             MessageBox.Show(
                 "Another Bambu Filament Importer window is already open. Close it before starting this version.",
@@ -23,6 +23,10 @@ public partial class App : Application
         var settings = AppSettingsStore.Load();
         ThemeService.Apply(settings.DarkMode);
         new MainWindow().Show();
+        if (!string.IsNullOrWhiteSpace(UpdateService.PendingCleanupDirectory))
+        {
+            UpdateService.ScheduleCleanup(UpdateService.PendingCleanupDirectory);
+        }
     }
 
     private void Application_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

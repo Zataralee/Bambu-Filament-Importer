@@ -8,15 +8,29 @@ public static class BambuCatalogIntegrity
     public static void ValidateProfileRoot(string profileRoot)
     {
         var manifestPath = Path.Combine(profileRoot, "BBL.json");
-        var bblRoot = Path.GetFullPath(Path.Combine(profileRoot, "BBL"));
-        var filamentRoot = Path.Combine(bblRoot, "filament");
-        if (!File.Exists(manifestPath) || !Directory.Exists(filamentRoot))
+        if (!File.Exists(manifestPath))
         {
             throw new InvalidDataException($"Bambu catalog is incomplete: {profileRoot}");
         }
 
         var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject()
             ?? throw new InvalidDataException($"Bambu catalog manifest could not be read: {manifestPath}");
+        ValidateProfileRoot(profileRoot, manifest, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+    }
+
+    internal static void ValidateProfileRoot(
+        string profileRoot,
+        JsonObject manifest,
+        IReadOnlyDictionary<string, string> proposedProfiles)
+    {
+        var manifestPath = Path.Combine(profileRoot, "BBL.json");
+        var bblRoot = Path.GetFullPath(Path.Combine(profileRoot, "BBL"));
+        var filamentRoot = Path.Combine(bblRoot, "filament");
+        if (!Directory.Exists(filamentRoot) && proposedProfiles.Count == 0)
+        {
+            throw new InvalidDataException($"Bambu catalog is incomplete: {profileRoot}");
+        }
+
         var filamentList = manifest["filament_list"]?.AsArray()
             ?? throw new InvalidDataException($"Bambu catalog has no filament_list: {manifestPath}");
 
@@ -24,18 +38,7 @@ public static class BambuCatalogIntegrity
         ValidateUniqueValues(filamentList, "sub_path", "profile path", manifestPath, NormalizePath);
 
         var knownNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in Directory.EnumerateFiles(filamentRoot, "*.json", SearchOption.AllDirectories)
-            .Where(path => Path.GetExtension(path).Equals(".json", StringComparison.OrdinalIgnoreCase)))
-        {
-            var profile = JsonNode.Parse(File.ReadAllText(path))?.AsObject()
-                ?? throw new InvalidDataException($"Filament profile could not be read: {path}");
-            var name = profile["name"]?.GetValue<string>();
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                knownNames.Add(name);
-            }
-        }
-
+        var loadedProfiles = new List<(string Name, JsonObject Profile)>();
         var bblRootWithSeparator = bblRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         foreach (var item in filamentList)
         {
@@ -47,13 +50,27 @@ public static class BambuCatalogIntegrity
             }
 
             var profilePath = Path.GetFullPath(Path.Combine(bblRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
-            if (!profilePath.StartsWith(bblRootWithSeparator, StringComparison.OrdinalIgnoreCase)
-                || !File.Exists(profilePath))
+            var normalizedPath = NormalizePath(relativePath);
+            if (!profilePath.StartsWith(bblRootWithSeparator, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException($"Bambu catalog profile path leaves the BBL folder: {relativePath}");
+            }
+
+            string profileJson;
+            if (proposedProfiles.TryGetValue(normalizedPath, out var proposedJson))
+            {
+                profileJson = proposedJson;
+            }
+            else if (File.Exists(profilePath))
+            {
+                profileJson = File.ReadAllText(profilePath);
+            }
+            else
             {
                 throw new InvalidDataException($"Bambu catalog profile file is missing: {name} -> {relativePath}");
             }
 
-            var profile = JsonNode.Parse(File.ReadAllText(profilePath))?.AsObject()
+            var profile = JsonNode.Parse(profileJson)?.AsObject()
                 ?? throw new InvalidDataException($"Filament profile could not be read: {profilePath}");
             var jsonName = profile["name"]?.GetValue<string>();
             if (!string.Equals(name, jsonName, StringComparison.OrdinalIgnoreCase))
@@ -61,6 +78,12 @@ public static class BambuCatalogIntegrity
                 throw new InvalidDataException($"Bambu catalog name mismatch: '{name}' does not match '{jsonName}' in {profilePath}");
             }
 
+            knownNames.Add(name);
+            loadedProfiles.Add((name, profile));
+        }
+
+        foreach (var (name, profile) in loadedProfiles)
+        {
             var inherits = profile["inherits"]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(inherits) && !knownNames.Contains(inherits))
             {

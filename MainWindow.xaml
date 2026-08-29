@@ -55,9 +55,10 @@
             <StackPanel DockPanel.Dock="Left">
                 <TextBlock Text="Bambu Filament Importer" FontSize="27" FontWeight="SemiBold"/>
                 <TextBlock Text="Manufacturer profile packages and local Bambu Studio library management" FontSize="14" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4,0,0"/>
-                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.2 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
+                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.3 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="UpdateButton" Content="Check for updates" Click="CheckForUpdates_Click" Margin="0,0,12,0"/>
                 <CheckBox x:Name="DarkModeCheck" Content="Dark mode" VerticalAlignment="Center" Margin="0,0,16,0"
                           Checked="DarkModeCheck_Changed" Unchecked="DarkModeCheck_Changed"/>
                 <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12,8">
@@ -104,8 +105,8 @@
                         <RadioButton x:Name="BothRadio" GroupName="Destination" Content="Both" IsChecked="True" Margin="0,0,0,16" Checked="Destination_Changed"/>
                         <CheckBox x:Name="InstallProgramCheck" Content="Mirror catalog to Program Files" IsChecked="False" Margin="0,0,0,18"/>
 
-                        <TextBlock Text="Target Printers" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                        <TextBlock Text="Detected from this Bambu Studio setup" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,7"/>
+                        <TextBlock Text="Local Machine Presets" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <TextBlock Text="Read from Bambu Studio files on this PC. No printer or account connection." TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,7"/>
                         <ListBox x:Name="PrinterList" MaxHeight="150" Margin="0,0,0,7" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>

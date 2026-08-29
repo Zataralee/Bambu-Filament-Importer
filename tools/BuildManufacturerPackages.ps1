@@ -209,6 +209,12 @@ if (Test-Path -LiteralPath $sunluSource) {
         $neutralProfiles = @()
         $baseEntries = @($sourceManifest.profiles | Where-Object { ([string]$_.name).EndsWith('@base') })
         foreach ($baseEntry in $baseEntries) {
+            $sourceBaseName = [string]$baseEntry.name
+            $baseName = if ($sourceBaseName -eq 'SUNLU Marble PLA @base') {
+                'SUNLU PLA Marble @base'
+            } else {
+                $sourceBaseName
+            }
             $zipPath = ([string]$baseEntry.relativePath).Replace('\', '/')
             $profileEntry = $archive.GetEntry($zipPath)
             if ($null -eq $profileEntry) {
@@ -223,9 +229,10 @@ if (Test-Path -LiteralPath $sunluSource) {
             }
 
             $baseJson.filament_id = Get-AmsSafeFilamentId ([string]$baseJson.filament_id) ([string]$baseEntry.name)
+            $baseJson.name = $baseName
 
             $preferredChild = $sourceManifest.profiles | Where-Object {
-                ([string]$_.name).Equals((([string]$baseEntry.name).Replace(' @base', ' @BBL X1C')))
+                ([string]$_.name).Equals(($sourceBaseName.Replace(' @base', ' @BBL X1C')))
             } | Select-Object -First 1
             if ($null -ne $preferredChild) {
                 $childZipPath = ([string]$preferredChild.relativePath).Replace('\', '/')
@@ -249,7 +256,7 @@ if (Test-Path -LiteralPath $sunluSource) {
             $fileName = [System.IO.Path]::GetFileName($zipPath)
             Write-JsonFile (Join-Path $vendorFolder $fileName) $baseJson
             $neutralProfiles += [ordered]@{
-                name = [string]$baseEntry.name
+                name = $baseName
                 relativePath = "filament/SUNLU/$fileName"
                 kind = 'system'
                 vendorGroup = [string]$baseEntry.vendorGroup

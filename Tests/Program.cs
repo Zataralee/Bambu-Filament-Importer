@@ -149,7 +149,7 @@ try
     renamed.Name = "SUNLU ABS Smoke @BBL X1C";
     var deviceResult = new BambuInstaller(testPaths, () => false).Install(devicePackage, ImportDestination.DeviceAms, installProgram: false);
     Check(deviceResult.WrittenFiles.Count == 2, "renamed Device/AMS import");
-    Check(File.Exists(Path.Combine(roaming, "system", "BBL", "filament", "SUNLU", "SUNLU ABS Smoke @BBL X1C.json")), "renamed profile path");
+    Check(File.Exists(Path.Combine(roaming, "system", "BBL", "filament", "SUNLU", "SUNLU ABS @BBL X1C.json")), "renamed profile preserves package path");
     var savedBase = JsonNode.Parse(File.ReadAllText(Path.Combine(roaming, "system", "BBL", "filament", "SUNLU", "SUNLU ABS @base.json")))!.AsObject();
     Check(savedBase["filament_vendor"]?[0]?.GetValue<string>() == "SUNLU ABS TEST", "edited manufacturer JSON");
 
@@ -185,7 +185,9 @@ try
 
     var collisionRoaming = Path.Combine(sandbox, "CollisionBambuStudio");
     var collisionProgram = Path.Combine(sandbox, "CollisionProgramProfiles");
-    Directory.CreateDirectory(Path.Combine(collisionRoaming, "system"));
+    var collisionFilaments = Path.Combine(collisionRoaming, "system", "BBL", "filament");
+    var collisionSunlu = Path.Combine(collisionFilaments, "SUNLU");
+    Directory.CreateDirectory(collisionSunlu);
     Directory.CreateDirectory(collisionProgram);
     var collisionManifest = new JsonObject
     {
@@ -193,21 +195,49 @@ try
         {
             new JsonObject
             {
-                ["name"] = "SUNLU PLA Marble @base",
-                ["sub_path"] = "filament/SUNLU/SUNLU Marble PLA @base.json"
+                ["name"] = "fdm_filament_pla",
+                ["sub_path"] = "filament/fdm_filament_pla.json"
             },
             new JsonObject
             {
-                ["name"] = "SUNLU Marble PLA @base",
+                ["name"] = "SUNLU PLA Marble @base",
                 ["sub_path"] = "filament/SUNLU/SUNLU Marble PLA @base.json"
             },
             new JsonObject
             {
                 ["name"] = "SUNLU PLA Marble @BBL A1",
                 ["sub_path"] = "filament/SUNLU/SUNLU Marble PLA @BBL A1.json"
-            }
+            },
+            new JsonObject
+            {
+                ["name"] = "SUNLU PLA Marble @BBL A1M",
+                ["sub_path"] = "filament/SUNLU/SUNLU Marble PLA @BBL A1M.json"
+            },
+            new JsonObject
+            {
+                ["name"] = "SUNLU PLA Marble @BBL P1P",
+                ["sub_path"] = "filament/SUNLU/SUNLU Marble PLA @BBL P1P.json"
+            },
+            new JsonObject
+            {
+                ["name"] = "SUNLU PLA Marble @BBL X1",
+                ["sub_path"] = "filament/SUNLU/SUNLU Marble PLA @BBL X1.json"
+            },
+            new JsonObject
+            {
+                ["name"] = "SUNLU PLA Marble @BBL X1C",
+                ["sub_path"] = "filament/SUNLU/SUNLU Marble PLA @BBL X1C.json"
+            },
         }
     };
+    File.WriteAllText(Path.Combine(collisionFilaments, "fdm_filament_pla.json"), "{\"type\":\"filament\",\"name\":\"fdm_filament_pla\"}");
+    File.WriteAllText(Path.Combine(collisionSunlu, "SUNLU Marble PLA @base.json"),
+        "{\"type\":\"filament\",\"name\":\"SUNLU PLA Marble @base\",\"inherits\":\"fdm_filament_pla\"}");
+    foreach (var suffix in new[] { "BBL A1", "BBL A1M", "BBL P1P", "BBL X1", "BBL X1C" })
+    {
+        File.WriteAllText(Path.Combine(collisionSunlu, $"SUNLU Marble PLA @{suffix}.json"),
+            $"{{\"type\":\"filament\",\"name\":\"SUNLU PLA Marble @{suffix}\",\"inherits\":\"SUNLU PLA Marble @base\"}}");
+    }
     File.WriteAllText(Path.Combine(collisionRoaming, "system", "BBL.json"), collisionManifest.ToJsonString());
     File.WriteAllText(Path.Combine(collisionProgram, "BBL.json"), "{\"filament_list\":[]}");
     File.WriteAllText(Path.Combine(collisionRoaming, "BambuStudio.conf"), "{\"app\":{\"preset_folder\":\"collision-user\"},\"filaments\":[]}");
@@ -216,11 +246,33 @@ try
     var collisionResult = new BambuInstaller(new BambuPaths(collisionRoaming, collisionProgram), () => false)
         .Install(collisionPackage, ImportDestination.DeviceAms, installProgram: false);
     var repairedManifest = JsonNode.Parse(File.ReadAllText(Path.Combine(collisionRoaming, "system", "BBL.json")))!["filament_list"]!.AsArray();
-    Check(repairedManifest.Count == 2, "same-path aliases removed during import");
-    Check(repairedManifest.All(item => item?["name"]?.GetValue<string>().StartsWith("SUNLU Marble PLA", StringComparison.Ordinal) == true), "canonical manifest names retained");
+    Check(repairedManifest.Count == 7, "complete catalog retained during alias import");
+    Check(repairedManifest.Any(item => item?["name"]?.GetValue<string>() == "SUNLU Marble PLA @base"), "selected canonical manifest name retained");
     Check(collisionResult.ManifestEntriesUpdated.Count == 2, "catalog collision updates reported");
     var repairedChild = JsonNode.Parse(File.ReadAllText(Path.Combine(collisionRoaming, "system", "BBL", "filament", "SUNLU", "SUNLU Marble PLA @BBL A1.json")))!.AsObject();
     Check(repairedChild["inherits"]?.GetValue<string>() == "SUNLU Marble PLA @base", "canonical inheritance retained");
+    var migratedSibling = JsonNode.Parse(File.ReadAllText(Path.Combine(collisionSunlu, "SUNLU Marble PLA @BBL A1M.json")))!.AsObject();
+    Check(migratedSibling["inherits"]?.GetValue<string>() == "SUNLU Marble PLA @base", "unselected sibling inheritance migrated");
+    BambuCatalogIntegrity.ValidateProfileRoot(Path.Combine(collisionRoaming, "system"));
+    Check(true, "full alias catalog remains loadable");
+
+    var correctedPackage = PackageReader.Load(Path.Combine(projectRoot, "packages", "manufacturers", "SUNLU.bflib"));
+    SelectOnly(correctedPackage, "SUNLU PLA Marble @base");
+    var a1Target = new PrinterTarget
+    {
+        Vendor = "BBL",
+        ModelName = "Bambu Lab A1",
+        ProfileSuffix = "BBL A1",
+        NozzleSummary = "0.4, 0.6, 0.8",
+        MachinePresetNames = ["Bambu Lab A1 0.4 nozzle", "Bambu Lab A1 0.6 nozzle", "Bambu Lab A1 0.8 nozzle"]
+    };
+    var correctedExpanded = PrinterProfileExpander.Expand(correctedPackage, [a1Target]);
+    new BambuInstaller(new BambuPaths(collisionRoaming, collisionProgram), () => false)
+        .Install(correctedExpanded, ImportDestination.DeviceAms, installProgram: false);
+    BambuCatalogIntegrity.ValidateProfileRoot(Path.Combine(collisionRoaming, "system"));
+    var restoredManifest = JsonNode.Parse(File.ReadAllText(Path.Combine(collisionRoaming, "system", "BBL.json")))!["filament_list"]!.AsArray();
+    Check(restoredManifest.Where(item => item?["name"]?.GetValue<string>().Contains("Marble", StringComparison.Ordinal) == true)
+        .All(item => item?["name"]?.GetValue<string>().StartsWith("SUNLU PLA Marble", StringComparison.Ordinal) == true), "corrected SUNLU package repairs affected catalog");
 
     var dependencyRoaming = Path.Combine(sandbox, "DependencyBambuStudio");
     var dependencyProgram = Path.Combine(sandbox, "DependencyProgramProfiles");
