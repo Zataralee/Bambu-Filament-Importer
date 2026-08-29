@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.7 - 2026-08-29
+
+- Added a separate Update libraries action that checks manufacturer packages independently from the BFI application version.
+- Added a lightweight GitHub catalog index with per-package versions, profile counts, and SHA-256 hashes.
+- Added validated, atomic library downloads with rollback and clear separation between updating package files and importing them into Bambu Studio.
+- Added isolated regression coverage for detecting, installing, and rechecking manufacturer library updates.
+
 ## 0.4.6 - 2026-08-29
 
 - Made the inactive-mirror repair action select the Device/AMS destination before calculating active catalog gaps.

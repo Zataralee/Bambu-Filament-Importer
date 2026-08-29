@@ -35,7 +35,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.6" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.7" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -68,6 +68,7 @@ public partial class MainWindow : Window
     private async void CheckForUpdates_Click(object sender, RoutedEventArgs e)
     {
         UpdateButton.IsEnabled = false;
+        LibraryUpdateButton.IsEnabled = false;
         UpdateButton.Content = "Checking...";
         try
         {
@@ -113,7 +114,94 @@ public partial class MainWindow : Window
         }
         finally
         {
-            UpdateButton.Content = "Check for updates";
+            UpdateButton.Content = "Update app";
+            UpdateButton.IsEnabled = true;
+            LibraryUpdateButton.IsEnabled = true;
+        }
+    }
+
+    private async void CheckLibraryUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        LibraryUpdateButton.IsEnabled = false;
+        UpdateButton.IsEnabled = false;
+        LibraryUpdateButton.Content = "Checking...";
+        var libraryDirectory = Path.Combine(AppContext.BaseDirectory, "Manufacturer Libraries");
+        try
+        {
+            using var service = new ManufacturerLibraryUpdateService();
+            var check = await service.CheckAsync(libraryDirectory);
+            if (check.Updates.Count == 0)
+            {
+                MessageBox.Show(
+                    this,
+                    $"All {check.CurrentCount} manufacturer libraries are current at catalog version {check.CatalogVersion}.",
+                    "Libraries are current",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var names = string.Join(Environment.NewLine, check.Updates.Select(entry => $"- {entry.DisplayName}"));
+            var answer = MessageBox.Show(
+                this,
+                $"Catalog version {check.CatalogVersion} has {check.Updates.Count} library update(s):{Environment.NewLine}{Environment.NewLine}" +
+                names + Environment.NewLine + Environment.NewLine +
+                "Download these package files now? This updates BFI's portable library folder only; it will not change Bambu Studio until you choose Install Selected.",
+                "Library updates available",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            LibraryUpdateButton.Content = "Downloading...";
+            var result = await service.InstallAsync(check);
+            var loadedPackagePath = _package?.FilePath;
+            if (!string.IsNullOrWhiteSpace(loadedPackagePath)
+                && result.UpdatedFiles.Contains(Path.GetFileName(loadedPackagePath), StringComparer.OrdinalIgnoreCase)
+                && Path.GetDirectoryName(Path.GetFullPath(loadedPackagePath))
+                    ?.Equals(Path.GetFullPath(result.LibraryDirectory), StringComparison.OrdinalIgnoreCase) == true)
+            {
+                LoadPackage(loadedPackagePath);
+            }
+            else
+            {
+                RefreshCatalogDriftStatus();
+            }
+
+            Log($"Updated {result.UpdatedFiles.Count} manufacturer package file(s) to catalog {result.CatalogVersion}.");
+            MessageBox.Show(
+                this,
+                $"Updated {result.UpdatedFiles.Count} manufacturer library package(s) to catalog version {result.CatalogVersion}.{Environment.NewLine}{Environment.NewLine}" +
+                "The package files are ready. Use Import Filament Package or Load Repair Package when you want to apply them to Bambu Studio.",
+                "Libraries updated",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            MessageBox.Show(
+                this,
+                "Windows blocked writing to BFI's Manufacturer Libraries folder. Reopen BFI as Administrator or move the portable BFI folder to a writable location.",
+                "Library update needs access",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                ex.Message,
+                "Library update failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Log(ex.ToString());
+        }
+        finally
+        {
+            LibraryUpdateButton.Content = "Update libraries";
+            LibraryUpdateButton.IsEnabled = true;
             UpdateButton.IsEnabled = true;
         }
     }

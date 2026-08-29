@@ -1,0 +1,89 @@
+{
+  "format": "bfi-manufacturer-library-index",
+  "formatVersion": 1,
+  "catalogVersion": "2026.08.29.2",
+  "generatedUtc": "2026-08-29T20:44:19.8943822Z",
+  "packages": [
+    {
+      "fileName": "eSUN.bflib",
+      "packageId": "esun-x1c-p1s-2026-08",
+      "displayName": "eSUN Complete Filament Library",
+      "manufacturer": "eSUN",
+      "version": "2026.08.29.2",
+      "profileCount": 36,
+      "sha256": "965E75BB81524204097718426C3C94B09F2C4BE1E66925FEC9C199E5EB73A8D7"
+    },
+    {
+      "fileName": "Fiberlogy.bflib",
+      "packageId": "fiberlogy-x1c-p1s-2026-08",
+      "displayName": "Fiberlogy Filament Library",
+      "manufacturer": "Fiberlogy",
+      "version": "2026.08.29.2",
+      "profileCount": 25,
+      "sha256": "B2FFFB806C6AB467D8A9DD950FB624A91EC58537476AD266BB1B248A676F1E79"
+    },
+    {
+      "fileName": "Fillamentum.bflib",
+      "packageId": "fillamentum-x1c-p1s-2026-08",
+      "displayName": "Fillamentum Filament Library",
+      "manufacturer": "Fillamentum",
+      "version": "2026.08.29.2",
+      "profileCount": 20,
+      "sha256": "F5320F8EFE773EB5602712DF6C0684DD1C7938412E8D768A790D0DB38EDF5407"
+    },
+    {
+      "fileName": "MatterHackers.bflib",
+      "packageId": "matterhackers-x1c-p1s-2026-08",
+      "displayName": "MatterHackers Filament Library",
+      "manufacturer": "MatterHackers",
+      "version": "2026.08.29.2",
+      "profileCount": 16,
+      "sha256": "015E6212E3EC0477D02AA5D3E0D142D2E0F3A3937069C2436C59F1A7A362A9FB"
+    },
+    {
+      "fileName": "Overture.bflib",
+      "packageId": "overture-x1c-p1s-2026-08",
+      "displayName": "Overture Complete Filament Library",
+      "manufacturer": "Overture",
+      "version": "2026.08.29.2",
+      "profileCount": 14,
+      "sha256": "233C6038E6F2D752DA3CF2C0FA54A982A34E073E0DA4C073C3FDDE71EE9DD017"
+    },
+    {
+      "fileName": "Polymaker.bflib",
+      "packageId": "polymaker-x1c-p1s-2026-08",
+      "displayName": "Polymaker Complete Filament Library",
+      "manufacturer": "Polymaker",
+      "version": "2026.08.29.2",
+      "profileCount": 48,
+      "sha256": "62029F4D0499424588E2C9A580DC44DA1185534ABE9420EB67AD33EAE5D6B8CE"
+    },
+    {
+      "fileName": "Prusament.bflib",
+      "packageId": "prusament-x1c-p1s-2026-08",
+      "displayName": "Prusament Filament Library",
+      "manufacturer": "Prusament",
+      "version": "2026.08.29.2",
+      "profileCount": 22,
+      "sha256": "7BCB6935EC05C6A9285A2E85427A5323ECFA1217AEE980DB9B1B3899A107ABF6"
+    },
+    {
+      "fileName": "Spectrum-Filaments.bflib",
+      "packageId": "spectrum-x1c-p1s-2026-08",
+      "displayName": "Spectrum Filaments Library",
+      "manufacturer": "Spectrum",
+      "version": "2026.08.29.2",
+      "profileCount": 22,
+      "sha256": "0020EB15D6F79DF8D34DEEDEB9D78D03C0226E91DDDE250F4712E33BCAE5B7ED"
+    },
+    {
+      "fileName": "SUNLU.bflib",
+      "packageId": "sunlu-neutral-2026-08",
+      "displayName": "SUNLU Complete Filament Library",
+      "manufacturer": "SUNLU",
+      "version": "2026.08.29.2",
+      "profileCount": 40,
+      "sha256": "CEF8CCCC4222773A9A83D3403D58340D9BDB37B5F489E55ECB51B0710BD14423"
+    }
+  ]
+}

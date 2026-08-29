@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.6 | By Zataralee**
+**Version 0.4.7 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -51,10 +51,11 @@ Official source references and catalog policy are documented in [catalogs/README
 - Validates the complete catalog before and after installation and rolls back a failed write automatically.
 - Monitors Bambu Studio continuously, locks the workspace whenever it opens, and refreshes local records when it closes.
 - Detects packaged profiles left only in an inactive Program Files mirror after a Bambu catalog refresh and loads the affected package for repair.
+- Checks and installs manufacturer library updates independently from application updates, with package hashes and rollback protection.
 - Checks GitHub Releases and installs confirmed updates in place.
 - Supports persistent light and dark modes.
 
-BFI does not connect to Bambu printers or Bambu Cloud and does not read account credentials or access-code values. Local device identifiers are used only to identify printer models and are never displayed, logged, or transmitted. Network access is used only when the user selects **Check for updates**, and the request goes to this repository's GitHub Releases API.
+BFI does not connect to Bambu printers or Bambu Cloud and does not read account credentials or access-code values. Local device identifiers are used only to identify printer models and are never displayed, logged, or transmitted. Network access is used only when the user selects **Update app** or **Update libraries**, and requests go to this repository's GitHub release or manufacturer-package files.
 
 ![Bambu Filament Importer dark mode](docs/images/main-window-dark.png)
 

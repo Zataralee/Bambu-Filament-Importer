@@ -1,5 +1,9 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -41,6 +45,14 @@ Check(AmsFilamentId.Read(mattePetgJson) == "GFSNL194", "P1S AMS round-trip ID re
 Check(manufacturerPackages.All(item => item.Manifest.PrinterNeutral), "all manufacturer packages printer-neutral");
 Check(manufacturerPackages.SelectMany(item => item.ProfileJsonByPath.Values)
     .All(json => !json.Contains("compatible_printers", StringComparison.OrdinalIgnoreCase)), "no printer dependency in package payloads");
+var manufacturerIndexPath = Path.Combine(projectRoot, "packages", "manufacturers", "index.json");
+var manufacturerIndex = JsonSerializer.Deserialize<ManufacturerLibraryIndex>(File.ReadAllText(manufacturerIndexPath),
+    new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+Check(manufacturerIndex.Format == "bfi-manufacturer-library-index"
+    && manufacturerIndex.Packages.Count == 9, "manufacturer update index");
+Check(manufacturerIndex.Packages.All(entry =>
+    Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(projectRoot, "packages", "manufacturers", entry.FileName))))
+        .Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase)), "manufacturer update hashes");
 var blankDisplayAliases = manufacturerPackages
     .SelectMany(package => package.Manifest.Profiles.Select(profile => new { Package = package, Profile = profile }))
     .Where(item => item.Profile.Name.EndsWith("@base", StringComparison.OrdinalIgnoreCase))
@@ -149,6 +161,41 @@ var testPaths = new BambuPaths(roaming, program);
 
 try
 {
+    var libraryUpdateFolder = Path.Combine(sandbox, "Manufacturer Libraries");
+    Directory.CreateDirectory(libraryUpdateFolder);
+    var indexedSunlu = manufacturerIndex.Packages.First(entry => entry.FileName == "SUNLU.bflib");
+    var indexedOverture = manufacturerIndex.Packages.First(entry => entry.FileName == "Overture.bflib");
+    File.Copy(Path.Combine(projectRoot, "packages", "manufacturers", indexedSunlu.FileName),
+        Path.Combine(libraryUpdateFolder, indexedSunlu.FileName));
+    var updateIndex = new ManufacturerLibraryIndex
+    {
+        Format = "bfi-manufacturer-library-index",
+        FormatVersion = 1,
+        CatalogVersion = manufacturerIndex.CatalogVersion,
+        Packages = [indexedSunlu, indexedOverture]
+    };
+    var fakeIndexUrl = "https://updates.test/index.json";
+    var fakePackageBaseUrl = "https://updates.test/packages/";
+    using (var updateClient = new HttpClient(new FakeHttpMessageHandler(new Dictionary<string, byte[]>
+    {
+        [fakeIndexUrl] = JsonSerializer.SerializeToUtf8Bytes(updateIndex),
+        [fakePackageBaseUrl + indexedOverture.FileName] = File.ReadAllBytes(
+            Path.Combine(projectRoot, "packages", "manufacturers", indexedOverture.FileName))
+    })))
+    using (var updateService = new ManufacturerLibraryUpdateService(updateClient, fakeIndexUrl, fakePackageBaseUrl))
+    {
+        var updateCheck = await updateService.CheckAsync(libraryUpdateFolder);
+        Check(updateCheck.CurrentCount == 1
+            && updateCheck.Updates.Count == 1
+            && updateCheck.Updates[0].FileName == indexedOverture.FileName, "library update detects only missing package");
+        var updateResult = await updateService.InstallAsync(updateCheck);
+        Check(updateResult.UpdatedFiles.SequenceEqual([indexedOverture.FileName])
+            && PackageReader.Load(Path.Combine(libraryUpdateFolder, indexedOverture.FileName)).Manifest.PackageId == indexedOverture.PackageId,
+            "library update installs validated package");
+        var currentCheck = await updateService.CheckAsync(libraryUpdateFolder);
+        Check(currentCheck.Updates.Count == 0 && currentCheck.CurrentCount == 2, "library update is idempotent");
+    }
+
     var discoveryRoaming = Path.Combine(sandbox, "DiscoveryBambuStudio");
     var discoveryProgram = Path.Combine(sandbox, "DiscoveryProgramProfiles");
     var discoveryMachineFolder = Path.Combine(discoveryRoaming, "system", "BBL", "machine");
@@ -571,4 +618,21 @@ static void CheckThrows<TException>(Action action, string name) where TException
     }
 
     throw new InvalidOperationException("Smoke test failed: " + name);
+}
+
+sealed class FakeHttpMessageHandler(IReadOnlyDictionary<string, byte[]> responses) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var url = request.RequestUri?.AbsoluteUri ?? "";
+        if (!responses.TryGetValue(url, out var contents))
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(contents)
+        });
+    }
 }

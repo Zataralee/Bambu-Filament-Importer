@@ -339,3 +339,46 @@ if (Test-Path -LiteralPath $sunluSource) {
         }
     }
 }
+
+$libraryIndexPackages = @(
+    Get-ChildItem -LiteralPath $OutputFolder -Filter '*.bflib' -File |
+        Sort-Object Name |
+        ForEach-Object {
+            $packageArchive = [System.IO.Compression.ZipFile]::OpenRead($_.FullName)
+            try {
+                $manifestEntry = $packageArchive.GetEntry('manifest.json')
+                if ($null -eq $manifestEntry) {
+                    throw "Missing manifest.json in $($_.Name)"
+                }
+                $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
+                try {
+                    $packageManifest = $manifestReader.ReadToEnd() | ConvertFrom-Json
+                }
+                finally {
+                    $manifestReader.Dispose()
+                }
+            }
+            finally {
+                $packageArchive.Dispose()
+            }
+
+            [ordered]@{
+                fileName = $_.Name
+                packageId = [string]$packageManifest.packageId
+                displayName = [string]$packageManifest.displayName
+                manufacturer = [string]$packageManifest.manufacturer
+                version = [string]$packageManifest.version
+                profileCount = @($packageManifest.profiles).Count
+                sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+            }
+        }
+)
+$libraryIndex = [ordered]@{
+    format = 'bfi-manufacturer-library-index'
+    formatVersion = 1
+    catalogVersion = [string]$catalog.version
+    generatedUtc = (Get-Date).ToUniversalTime().ToString('o')
+    packages = $libraryIndexPackages
+}
+Write-JsonFile (Join-Path $OutputFolder 'index.json') $libraryIndex
+Write-Host "Created manufacturer library index ($($libraryIndexPackages.Count) packages)"
