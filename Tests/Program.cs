@@ -628,10 +628,20 @@ static void RenderWindow(
             window.Show();
             window.UpdateLayout();
             if (window.FindName("SelectAllFilamentsButton") is not System.Windows.Controls.Button
-                || window.FindName("DeselectAllFilamentsButton") is not System.Windows.Controls.Button)
+                || window.FindName("DeselectAllFilamentsButton") is not System.Windows.Controls.Button
+                || window.FindName("TableSelectAllFilamentsButton") is not System.Windows.Controls.Button
+                || window.FindName("TableDeselectAllFilamentsButton") is not System.Windows.Controls.Button)
             {
                 throw new InvalidOperationException("Import filament selection controls did not render.");
             }
+            var previewPackagePath = Path.Combine(
+                Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..")),
+                "packages",
+                "manufacturers",
+                "TINMORRY.bflib");
+            var previewPackage = PackageReader.Load(previewPackagePath);
+            ((System.Windows.Controls.DataGrid)window.FindName("PackageGrid")).ItemsSource = previewPackage.Manifest.Profiles;
+            window.UpdateLayout();
             Directory.CreateDirectory(Path.GetDirectoryName(screenshotPath)!);
             SaveWindow(window, screenshotPath);
 
@@ -680,8 +690,13 @@ static void RenderWindow(
             SaveWindow(catalogWindow, catalogScreenshotPath);
             catalogWindow.Close();
 
+            tabs.SelectedIndex = 0;
             ThemeService.Apply(true);
+            window.InvalidateVisual();
             window.UpdateLayout();
+            window.Dispatcher.Invoke(
+                () => { },
+                System.Windows.Threading.DispatcherPriority.Render);
             SaveWindow(window, darkScreenshotPath);
             window.Close();
             app.Shutdown();

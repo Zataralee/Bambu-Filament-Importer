@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.12 - 2026-08-29
+
+- Added Select All and Deselect All commands directly above the loaded filament package table while retaining the matching controls in Import Options.
+
 ## 0.4.11 - 2026-08-29
 
 - Added explicit Select All Filaments and Deselect All Filaments commands to package review.

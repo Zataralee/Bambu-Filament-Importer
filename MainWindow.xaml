@@ -56,7 +56,7 @@
             <StackPanel DockPanel.Dock="Left">
                 <TextBlock Text="Bambu Filament Importer" FontSize="27" FontWeight="SemiBold"/>
                 <TextBlock Text="Manufacturer profile packages and local Bambu Studio library management" FontSize="14" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4,0,0"/>
-                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.11 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
+                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.12 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -182,6 +182,7 @@
                             <Grid Margin="0,10,0,0">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
@@ -192,7 +193,11 @@
                                         <TextBlock Text="Choose a manufacturer library to review before installation." Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
                                     </StackPanel>
                                 </DockPanel>
-                                <DataGrid x:Name="PackageGrid" Grid.Row="1" SelectionChanged="PackageGrid_SelectionChanged">
+                                <WrapPanel Grid.Row="1" Margin="0,0,0,8">
+                                    <Button x:Name="TableSelectAllFilamentsButton" Content="Select All" Click="SelectAllFilaments_Click" MinWidth="0"/>
+                                    <Button x:Name="TableDeselectAllFilamentsButton" Content="Deselect All" Click="DeselectAllFilaments_Click" MinWidth="0" Margin="0"/>
+                                </WrapPanel>
+                                <DataGrid x:Name="PackageGrid" Grid.Row="2" SelectionChanged="PackageGrid_SelectionChanged">
                                     <DataGrid.Columns>
                                         <DataGridCheckBoxColumn Header="Install" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="62"/>
                                         <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="260"/>
@@ -202,7 +207,7 @@
                                         <DataGridTextColumn Header="Package path" Binding="{Binding RelativePath}" IsReadOnly="True" Width="260"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
-                                <Border Grid.Row="2" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="11" Margin="0,11,0,0">
+                                <Border Grid.Row="3" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="11" Margin="0,11,0,0">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
