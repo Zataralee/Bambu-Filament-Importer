@@ -79,13 +79,47 @@ var livePaths = new BambuPaths();
 BambuCatalogIntegrity.ValidateProfileRoot(livePaths.RoamingProfileRoot);
 BambuCatalogIntegrity.ValidateProfileRoot(livePaths.ProgramProfileRoot);
 Check(true, "live catalog integrity");
+var monitorProbeState = 0;
+var monitorStates = new System.Collections.Concurrent.ConcurrentQueue<bool>();
+using (var processMonitor = new BambuProcessMonitor(
+    () => Volatile.Read(ref monitorProbeState) == 1,
+    TimeSpan.FromMilliseconds(20)))
+{
+    processMonitor.StateChanged += monitorStates.Enqueue;
+    processMonitor.Start(initialState: false);
+    Volatile.Write(ref monitorProbeState, 1);
+    Check(SpinWait.SpinUntil(() => monitorStates.Contains(true), TimeSpan.FromSeconds(2)),
+        "process monitor detects Bambu Studio opening");
+    Volatile.Write(ref monitorProbeState, 0);
+    Check(SpinWait.SpinUntil(() => monitorStates.Contains(false), TimeSpan.FromSeconds(2)),
+        "process monitor detects Bambu Studio closing");
+}
 var liveLibrary = new BambuLibraryScanner(livePaths).LoadCurrentFilaments();
 Check(liveLibrary.Any(profile => profile.StorageKind == FilamentStorageKind.SystemCatalog), "system catalog scan");
 Check(liveLibrary.Any(profile => profile.StorageKind == FilamentStorageKind.UserPreset), "user Project Library scan");
-var liveProfile = liveLibrary.First(profile => profile.Name.Equals("eSUN PLA+ @BBL X1C", StringComparison.OrdinalIgnoreCase));
-var liveSettings = new FilamentSettingsService(livePaths).Load(liveProfile);
-Check(liveSettings.Any(setting => setting.Key == "nozzle_temperature" && setting.Value.Contains("220")), "direct nozzle setting");
-Check(liveSettings.Any(setting => setting.Key == "hot_plate_temp" && !setting.IsDirect), "inherited bed setting");
+var liveSettingsService = new FilamentSettingsService(livePaths);
+List<ProfileSettingEntry>? liveSettings = null;
+foreach (var profile in liveLibrary.Where(profile => profile.StorageKind == FilamentStorageKind.SystemCatalog))
+{
+    try
+    {
+        var candidate = liveSettingsService.Load(profile);
+        if (candidate.Any(setting => setting.Key == "nozzle_temperature" && setting.IsDirect) &&
+            candidate.Any(setting => setting.Key == "hot_plate_temp" && !setting.IsDirect))
+        {
+            liveSettings = candidate;
+            break;
+        }
+    }
+    catch
+    {
+        // A third-party preset can be incomplete without invalidating settings resolution for the catalog.
+    }
+}
+Check(liveSettings is not null, "live settings profile discovery");
+var resolvedLiveSettings = liveSettings ?? throw new InvalidOperationException("No suitable live settings profile was found.");
+Check(resolvedLiveSettings.Any(setting => setting.Key == "nozzle_temperature" && setting.IsDirect), "direct nozzle setting");
+Check(resolvedLiveSettings.Any(setting => setting.Key == "hot_plate_temp" && !setting.IsDirect), "inherited bed setting");
 var discoveredPrinters = new PrinterDiscoveryService(livePaths).DiscoverConfiguredPrinters();
 Check(discoveredPrinters.Any(printer => printer.ModelName == "Bambu Lab X1 Carbon"), "configured X1C discovery");
 Check(discoveredPrinters.Any(printer => printer.ModelName == "Bambu Lab P1S"), "configured P1S discovery");

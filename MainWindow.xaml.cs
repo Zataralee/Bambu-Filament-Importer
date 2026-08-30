@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Threading;
 using BambuFilamentImporter.Models;
 using BambuFilamentImporter.Services;
 using Microsoft.Win32;
@@ -21,7 +20,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<PrinterTarget> _printerTargets = [];
     private readonly FilamentSettingsService _settingsService;
     private readonly ICollectionView _settingsView;
-    private readonly DispatcherTimer _studioMonitor;
+    private readonly BambuProcessMonitor _studioMonitor;
     private LoadedFilamentPackage? _package;
     private CurrentFilamentEntry? _selectedCurrent;
     private FilamentProductGroup? _selectedProduct;
@@ -40,7 +39,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.12" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.13" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -67,12 +66,17 @@ public partial class MainWindow : Window
             Log($"Existing manufacturer libraries could not be migrated: {ex.Message}");
         }
         LoadPrinterTargets();
-        RefreshBambuStatus();
+        var studioRunning = BambuProcess.IsStudioRunning();
+        RefreshBambuStatus(studioRunning);
         LoadCurrentLibrary();
-        _studioMonitor = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _studioMonitor.Tick += StudioMonitor_Tick;
-        _studioMonitor.Start();
-        Closed += (_, _) => _studioMonitor.Stop();
+        _studioMonitor = new BambuProcessMonitor();
+        _studioMonitor.StateChanged += StudioMonitor_StateChanged;
+        _studioMonitor.Start(studioRunning);
+        Closed += (_, _) =>
+        {
+            _studioMonitor.StateChanged -= StudioMonitor_StateChanged;
+            _studioMonitor.Dispose();
+        };
         Loaded += MainWindow_Loaded;
     }
 
@@ -1377,9 +1381,18 @@ public partial class MainWindow : Window
         CurrentSelectionTitle.Text = "Select a manufacturer, filament, or printer profile";
     }
 
-    private void StudioMonitor_Tick(object? sender, EventArgs e)
+    private void StudioMonitor_StateChanged(bool isRunning)
     {
-        var isRunning = BambuProcess.IsStudioRunning();
+        if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        _ = Dispatcher.BeginInvoke(() => ApplyStudioRunningState(isRunning));
+    }
+
+    private void ApplyStudioRunningState(bool isRunning)
+    {
         if (_lastStudioRunning == isRunning)
         {
             return;

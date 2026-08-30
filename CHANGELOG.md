@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.13 - 2026-08-30
+
+- Replaced UI-thread-only Bambu Studio polling with a resilient background process monitor.
+- Automatically unlocks BFI and refreshes printer records, current libraries, duplicate state, and settings after the last Bambu Studio process exits.
+- Added regression coverage for both Bambu Studio opening and closing transitions.
+
 ## 0.4.12 - 2026-08-29
 
 - Added Select All and Deselect All commands directly above the loaded filament package table while retaining the matching controls in Import Options.
