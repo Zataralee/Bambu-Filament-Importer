@@ -9,28 +9,28 @@ public static class ManufacturerLibraryStore
         "BambuFilamentImporter",
         "Manufacturer Libraries");
 
-    public static string BundledDirectory => Path.Combine(AppContext.BaseDirectory, "Manufacturer Libraries");
+    public static string LegacyBundledDirectory => Path.Combine(AppContext.BaseDirectory, "Manufacturer Libraries");
 
-    public static int SeedBundledLibraries() => SeedBundledLibraries(ManagedDirectory, BundledDirectory);
+    public static int MigrateLegacyLibraries() => MigrateLegacyLibraries(ManagedDirectory, LegacyBundledDirectory);
 
-    public static int SeedBundledLibraries(string managedDirectory, string bundledDirectory)
+    public static int MigrateLegacyLibraries(string managedDirectory, string legacyDirectory)
     {
-        if (!Directory.Exists(bundledDirectory))
+        if (!Directory.Exists(legacyDirectory))
         {
             return 0;
         }
 
-        var bundledPackages = Directory.EnumerateFiles(bundledDirectory, "*.bflib", SearchOption.TopDirectoryOnly)
+        var legacyPackages = Directory.EnumerateFiles(legacyDirectory, "*.bflib", SearchOption.TopDirectoryOnly)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        if (bundledPackages.Count == 0)
+        if (legacyPackages.Count == 0)
         {
             return 0;
         }
 
         Directory.CreateDirectory(managedDirectory);
         var copied = 0;
-        foreach (var sourcePath in bundledPackages)
+        foreach (var sourcePath in legacyPackages)
         {
             var destinationPath = Path.Combine(managedDirectory, Path.GetFileName(sourcePath));
             if (File.Exists(destinationPath))
@@ -51,7 +51,6 @@ public static class ManufacturerLibraryStore
         return
         [
             ManagedDirectory,
-            BundledDirectory,
             Path.Combine(AppContext.BaseDirectory, "packages", "manufacturers")
         ];
     }

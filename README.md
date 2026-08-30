@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.8 | By Zataralee**
+**Version 0.4.9 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -16,9 +16,9 @@ Bambu Studio stores filament presets in several locations and associates system 
 
 The importer identifies locally registered printer models from the user's own Bambu Studio configuration, then uses enabled machine presets only as a clearly labeled fallback. A package is therefore not tied to the original developer's printers.
 
-## Included Libraries
+## Available Libraries
 
-The repository currently provides nine independently importable manufacturer packages containing 243 product families:
+BFI's online catalog currently provides nine independently downloadable manufacturer packages containing 243 product families. Libraries are selected inside BFI and are not bundled with the application download.
 
 | Manufacturer | Products |
 | --- | ---: |
@@ -51,12 +51,15 @@ Official source references and catalog policy are documented in [catalogs/README
 - Validates the complete catalog before and after installation and rolls back a failed write automatically.
 - Monitors Bambu Studio continuously, locks the workspace whenever it opens, and refreshes local records when it closes.
 - Detects packaged profiles left only in an inactive Program Files mirror after a Bambu catalog refresh and loads the affected package for repair.
+- Checks for BFI and filament-library updates at startup without installing either automatically.
+- Presents a selectable manufacturer catalog so users download only the libraries they want.
+- Notifies existing users only about updates to installed libraries and separately announces newly published libraries.
 - Checks and installs manufacturer library updates independently from application updates, with package hashes and rollback protection.
 - Keeps one managed manufacturer library folder in Local AppData so portable BFI copies do not create competing catalogs in Downloads or other launch folders.
 - Checks GitHub Releases and installs confirmed updates in place.
 - Supports persistent light and dark modes.
 
-BFI does not connect to Bambu printers or Bambu Cloud and does not read account credentials or access-code values. Local device identifiers are used only to identify printer models and are never displayed, logged, or transmitted. Network access is used only when the user selects **Update app** or **Update libraries**, and requests go to this repository's GitHub release or manufacturer-package files.
+BFI does not connect to Bambu printers or Bambu Cloud and does not read account credentials or access-code values. Local device identifiers are used only to identify printer models and are never displayed, logged, or transmitted. At startup, BFI checks this repository for the latest application release and manufacturer-library index. Package files are downloaded only after the user selects libraries and confirms the download.
 
 ![Bambu Filament Importer dark mode](docs/images/main-window-dark.png)
 
@@ -65,9 +68,10 @@ BFI does not connect to Bambu printers or Bambu Cloud and does not read account 
 1. Download the current Windows release and extract it to a normal writable folder.
 2. Close Bambu Studio.
 3. Start `BambuFilamentImporter.exe`.
-4. Open the **Import Package** tab and select **Import Filament Package**.
-5. Choose a `.bflib` file from the managed `Manufacturer Libraries` folder opened by BFI.
-6. Select the destination and target printer models, review duplicates, and install.
+4. Select **Download & Update Filament Libraries**, choose the manufacturers you want, and download them.
+5. Open the **Import Package** tab and select **Import Filament Package**.
+6. Choose a `.bflib` file from the managed `Manufacturer Libraries` folder opened by BFI.
+7. Select the destination and target printer models, review duplicates, and install.
 
 Program Files mirroring requires Administrator access. Normal roaming-catalog and Project Library imports do not.
 

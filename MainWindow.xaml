@@ -47,6 +47,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -55,20 +56,51 @@
             <StackPanel DockPanel.Dock="Left">
                 <TextBlock Text="Bambu Filament Importer" FontSize="27" FontWeight="SemiBold"/>
                 <TextBlock Text="Manufacturer profile packages and local Bambu Studio library management" FontSize="14" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4,0,0"/>
-                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.8 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
+                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.9 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
             </StackPanel>
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button x:Name="LibraryUpdateButton" Content="Update libraries" Click="CheckLibraryUpdates_Click" Width="122" MinWidth="0" Margin="0,0,8,0"/>
-                <Button x:Name="UpdateButton" Content="Update app" Click="CheckForUpdates_Click" Width="108" MinWidth="0" Margin="0,0,12,0"/>
-                <CheckBox x:Name="DarkModeCheck" Content="Dark mode" VerticalAlignment="Center" Margin="0,0,16,0"
-                          Checked="DarkModeCheck_Changed" Unchecked="DarkModeCheck_Changed"/>
-                <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12,8">
-                    <TextBlock x:Name="BambuStatusText" Text="Checking Bambu Studio..." FontWeight="SemiBold"/>
-                </Border>
+            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <CheckBox x:Name="DarkModeCheck" Content="Dark mode" VerticalAlignment="Center" Margin="0,0,16,0"
+                              Checked="DarkModeCheck_Changed" Unchecked="DarkModeCheck_Changed"/>
+                    <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12,8">
+                        <TextBlock x:Name="BambuStatusText" Text="Checking Bambu Studio..." FontWeight="SemiBold"/>
+                    </Border>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,7,0,0">
+                    <Button x:Name="LibraryUpdateButton" Content="Download &amp; Update Filament Libraries" Click="CheckLibraryUpdates_Click" Width="238" MinWidth="0" Margin="0,0,8,0"/>
+                    <Button x:Name="UpdateButton" Content="Update BFI" Click="CheckForUpdates_Click" Width="108" MinWidth="0" Margin="0"/>
+                </StackPanel>
             </StackPanel>
         </DockPanel>
 
-        <Border x:Name="LibraryActionBar" Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,14">
+        <StackPanel x:Name="StartupNotificationsPanel" Grid.Row="1" Margin="0,0,0,14" Visibility="Collapsed">
+            <Border x:Name="AppUpdateNotice" Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Visibility="Collapsed" Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="AppUpdateNoticeText" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,14,0"/>
+                    <Button Grid.Column="1" Content="Download and Install" Click="DownloadAvailableAppUpdate_Click" MinWidth="150"/>
+                    <Button Grid.Column="2" Content="Dismiss" Click="DismissAppUpdateNotice_Click" MinWidth="68" Margin="0"/>
+                </Grid>
+            </Border>
+            <Border x:Name="LibraryUpdateNotice" Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="LibraryUpdateNoticeText" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,14,0"/>
+                    <Button Grid.Column="1" Content="Download &amp; Update Filament Libraries" Click="CheckLibraryUpdates_Click" MinWidth="230"/>
+                    <Button Grid.Column="2" Content="Dismiss" Click="DismissLibraryUpdateNotice_Click" MinWidth="68" Margin="0"/>
+                </Grid>
+            </Border>
+        </StackPanel>
+
+        <Border x:Name="LibraryActionBar" Grid.Row="2" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,14">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -87,7 +119,7 @@
             </Grid>
         </Border>
 
-        <Grid x:Name="WorkspacePanel" Grid.Row="2">
+        <Grid x:Name="WorkspacePanel" Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="310"/>
                 <ColumnDefinition Width="14"/>
@@ -306,6 +338,6 @@
             </Border>
         </Grid>
 
-        <TextBlock Grid.Row="3" Text="Bambu Studio must be closed before installing, editing, or removing profiles. Program Files changes require Administrator access." Foreground="{DynamicResource MutedTextBrush}" Margin="0,12,0,0"/>
+        <TextBlock Grid.Row="4" Text="Bambu Studio must be closed before installing, editing, or removing profiles. Program Files changes require Administrator access." Foreground="{DynamicResource MutedTextBrush}" Margin="0,12,0,0"/>
     </Grid>
 </Window>

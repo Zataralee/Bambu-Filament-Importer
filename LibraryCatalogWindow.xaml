@@ -1,0 +1,77 @@
+<Window x:Class="BambuFilamentImporter.LibraryCatalogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Download &amp; Update Filament Libraries" Icon="BFI Icon.ico"
+        Height="570" Width="900" MinHeight="480" MinWidth="760"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource WindowBackgroundBrush}">
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="13,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="MinWidth" Value="92"/>
+        </Style>
+        <Style x:Key="CatalogCell" TargetType="TextBlock">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=Text}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="260"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Filament Libraries" FontSize="23" FontWeight="SemiBold"/>
+                <TextBlock x:Name="CatalogSummaryText" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4,12,0"/>
+            </StackPanel>
+            <TextBox x:Name="CatalogSearchText" Grid.Column="1" Height="30" VerticalContentAlignment="Center"
+                     TextChanged="CatalogSearchText_Changed" ToolTip="Filter manufacturer libraries"/>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,16,0,10">
+            <Button Content="Select Updates" Click="SelectUpdates_Click"/>
+            <Button Content="Select Available" Click="SelectAvailable_Click"/>
+            <Button Content="Clear" Click="Clear_Click" Margin="0"/>
+        </StackPanel>
+
+        <DataGrid x:Name="CatalogGrid" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False"
+                  IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                  BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Download" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      IsEnabled="{Binding CanDownload}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Manufacturer" Binding="{Binding Manufacturer}" Width="150" ElementStyle="{StaticResource CatalogCell}"/>
+                <DataGridTextColumn Header="Library" Binding="{Binding DisplayName}" Width="*" MinWidth="230" ElementStyle="{StaticResource CatalogCell}"/>
+                <DataGridTextColumn Header="Profiles" Binding="{Binding ProfileCount}" Width="72"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="145" ElementStyle="{StaticResource CatalogCell}"/>
+                <DataGridTextColumn Header="Version" Binding="{Binding VersionText}" Width="110" ElementStyle="{StaticResource CatalogCell}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <TextBlock Grid.Row="3" Text="Downloaded packages remain separate from Bambu Studio until you review and install them from the Import Package tab."
+                   TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,10,0,14"/>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" Click="Cancel_Click"/>
+            <Button x:Name="DownloadButton" Content="Download Selected" Click="Download_Click" Margin="0" MinWidth="145"/>
+        </StackPanel>
+    </Grid>
+</Window>

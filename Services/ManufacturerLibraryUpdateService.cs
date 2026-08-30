@@ -41,7 +41,7 @@ public sealed class ManufacturerLibraryUpdateService : IDisposable
         }
     }
 
-    public async Task<ManufacturerLibraryUpdateCheck> CheckAsync(
+    public async Task<ManufacturerLibraryCatalog> GetCatalogAsync(
         string libraryDirectory,
         CancellationToken cancellationToken = default)
     {
@@ -63,36 +63,40 @@ public sealed class ManufacturerLibraryUpdateService : IDisposable
         ValidateIndex(index);
 
         var fullLibraryDirectory = Path.GetFullPath(libraryDirectory);
-        var updates = new List<ManufacturerLibraryIndexEntry>();
-        var currentCount = 0;
+        var entries = new List<ManufacturerLibraryCatalogEntry>();
         foreach (var entry in index.Packages)
         {
             var localPath = Path.Combine(fullLibraryDirectory, entry.FileName);
-            if (IsCurrentPackage(localPath, entry))
-            {
-                currentCount++;
-            }
-            else
-            {
-                updates.Add(entry);
-            }
+            entries.Add(InspectPackage(localPath, entry));
         }
 
-        return new ManufacturerLibraryUpdateCheck(
+        return new ManufacturerLibraryCatalog(
             index.CatalogVersion,
             fullLibraryDirectory,
-            currentCount,
-            updates);
+            entries);
     }
 
     public async Task<ManufacturerLibraryUpdateResult> InstallAsync(
-        ManufacturerLibraryUpdateCheck check,
+        ManufacturerLibraryCatalog catalog,
+        IReadOnlyCollection<ManufacturerLibraryIndexEntry> selectedPackages,
         CancellationToken cancellationToken = default)
     {
-        if (check.Updates.Count == 0)
+        if (selectedPackages.Count == 0)
         {
-            return new ManufacturerLibraryUpdateResult(check.CatalogVersion, check.LibraryDirectory, []);
+            return new ManufacturerLibraryUpdateResult(catalog.CatalogVersion, catalog.LibraryDirectory, []);
         }
+
+        var publishedEntries = catalog.Entries
+            .Select(item => item.Package)
+            .ToDictionary(entry => entry.PackageId, StringComparer.OrdinalIgnoreCase);
+        var requestedEntries = selectedPackages
+            .DistinctBy(entry => entry.PackageId, StringComparer.OrdinalIgnoreCase)
+            .Select(entry => publishedEntries.TryGetValue(entry.PackageId, out var published)
+                && published.FileName.Equals(entry.FileName, StringComparison.OrdinalIgnoreCase)
+                && published.Sha256.Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase)
+                    ? published
+                    : throw new InvalidDataException($"{entry.DisplayName} is not part of the current manufacturer library catalog."))
+            .ToList();
 
         var updateRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -104,7 +108,7 @@ public sealed class ManufacturerLibraryUpdateService : IDisposable
 
         try
         {
-            foreach (var entry in check.Updates)
+            foreach (var entry in requestedEntries)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var packageUri = new Uri(_packageBaseUri, Uri.EscapeDataString(entry.FileName));
@@ -140,13 +144,13 @@ public sealed class ManufacturerLibraryUpdateService : IDisposable
                 stagedPackages[entry] = stagedPath;
             }
 
-            Directory.CreateDirectory(check.LibraryDirectory);
+            Directory.CreateDirectory(catalog.LibraryDirectory);
             var originalFiles = new Dictionary<string, byte[]?>(StringComparer.OrdinalIgnoreCase);
             try
             {
                 foreach (var (entry, stagedPath) in stagedPackages)
                 {
-                    var destinationPath = Path.Combine(check.LibraryDirectory, entry.FileName);
+                    var destinationPath = Path.Combine(catalog.LibraryDirectory, entry.FileName);
                     originalFiles[destinationPath] = File.Exists(destinationPath)
                         ? await File.ReadAllBytesAsync(destinationPath, cancellationToken)
                         : null;
@@ -160,8 +164,8 @@ public sealed class ManufacturerLibraryUpdateService : IDisposable
             }
 
             return new ManufacturerLibraryUpdateResult(
-                check.CatalogVersion,
-                check.LibraryDirectory,
+                catalog.CatalogVersion,
+                catalog.LibraryDirectory,
                 stagedPackages.Keys.Select(entry => entry.FileName).Order(StringComparer.OrdinalIgnoreCase).ToList());
         }
         finally
@@ -178,22 +182,37 @@ public sealed class ManufacturerLibraryUpdateService : IDisposable
         }
     }
 
-    private static bool IsCurrentPackage(string path, ManufacturerLibraryIndexEntry entry)
+    private static ManufacturerLibraryCatalogEntry InspectPackage(
+        string path,
+        ManufacturerLibraryIndexEntry entry)
     {
         if (!File.Exists(path))
         {
-            return false;
+            return new ManufacturerLibraryCatalogEntry(
+                entry,
+                ManufacturerLibraryStatus.Available,
+                path,
+                null);
         }
 
         try
         {
             var package = PackageReader.Load(path);
-            return package.Manifest.PackageId.Equals(entry.PackageId, StringComparison.OrdinalIgnoreCase)
+            var isCurrent = package.Manifest.PackageId.Equals(entry.PackageId, StringComparison.OrdinalIgnoreCase)
                 && CompareCatalogVersions(package.Manifest.Version, entry.Version) >= 0;
+            return new ManufacturerLibraryCatalogEntry(
+                entry,
+                isCurrent ? ManufacturerLibraryStatus.Current : ManufacturerLibraryStatus.UpdateAvailable,
+                path,
+                package.Manifest.Version);
         }
         catch
         {
-            return false;
+            return new ManufacturerLibraryCatalogEntry(
+                entry,
+                ManufacturerLibraryStatus.UpdateAvailable,
+                path,
+                null);
         }
     }
 
@@ -231,6 +250,8 @@ public sealed class ManufacturerLibraryUpdateService : IDisposable
                 || !Path.GetFileName(entry.FileName).Equals(entry.FileName, StringComparison.Ordinal)
                 || !entry.FileName.EndsWith(".bflib", StringComparison.OrdinalIgnoreCase)
                 || string.IsNullOrWhiteSpace(entry.PackageId)
+                || string.IsNullOrWhiteSpace(entry.DisplayName)
+                || string.IsNullOrWhiteSpace(entry.Manufacturer)
                 || string.IsNullOrWhiteSpace(entry.Version)
                 || entry.ProfileCount <= 0
                 || entry.Sha256.Length != 64
@@ -301,11 +322,36 @@ public sealed class ManufacturerLibraryIndexEntry
     public string Sha256 { get; set; } = "";
 }
 
-public sealed record ManufacturerLibraryUpdateCheck(
+public enum ManufacturerLibraryStatus
+{
+    Available,
+    Current,
+    UpdateAvailable
+}
+
+public sealed record ManufacturerLibraryCatalogEntry(
+    ManufacturerLibraryIndexEntry Package,
+    ManufacturerLibraryStatus Status,
+    string LocalPath,
+    string? InstalledVersion)
+{
+    public bool IsInstalled => Status != ManufacturerLibraryStatus.Available;
+}
+
+public sealed record ManufacturerLibraryCatalog(
     string CatalogVersion,
     string LibraryDirectory,
-    int CurrentCount,
-    IReadOnlyList<ManufacturerLibraryIndexEntry> Updates);
+    IReadOnlyList<ManufacturerLibraryCatalogEntry> Entries)
+{
+    public int InstalledCount => Entries.Count(entry => entry.IsInstalled);
+    public int CurrentCount => Entries.Count(entry => entry.Status == ManufacturerLibraryStatus.Current);
+    public IReadOnlyList<ManufacturerLibraryCatalogEntry> Updates => Entries
+        .Where(entry => entry.Status == ManufacturerLibraryStatus.UpdateAvailable)
+        .ToList();
+    public IReadOnlyList<ManufacturerLibraryCatalogEntry> Available => Entries
+        .Where(entry => entry.Status == ManufacturerLibraryStatus.Available)
+        .ToList();
+}
 
 public sealed record ManufacturerLibraryUpdateResult(
     string CatalogVersion,

@@ -30,12 +30,17 @@ public partial class MainWindow : Window
     private bool? _lastStudioRunning;
     private List<string> _catalogDriftPackages = [];
     private List<string> _catalogDriftPackagePaths = [];
+    private UpdateRelease? _availableAppUpdate;
+    private ManufacturerLibraryCatalog? _availableLibraryCatalog;
+    private HashSet<string> _newLibraryPackageIds = new(StringComparer.OrdinalIgnoreCase);
+
+    public bool StartupUpdateChecksEnabled { get; set; } = true;
 
     public MainWindow()
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.8" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.9" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -51,15 +56,15 @@ public partial class MainWindow : Window
         PrinterList.ItemsSource = _printerTargets;
         try
         {
-            var seededLibraries = ManufacturerLibraryStore.SeedBundledLibraries();
-            if (seededLibraries > 0)
+            var migratedLibraries = ManufacturerLibraryStore.MigrateLegacyLibraries();
+            if (migratedLibraries > 0)
             {
-                Log($"Added {seededLibraries} bundled manufacturer package(s) to the managed library folder.");
+                Log($"Migrated {migratedLibraries} existing manufacturer package(s) to the managed library folder.");
             }
         }
         catch (Exception ex)
         {
-            Log($"Bundled manufacturer libraries could not be initialized: {ex.Message}");
+            Log($"Existing manufacturer libraries could not be migrated: {ex.Message}");
         }
         LoadPrinterTargets();
         RefreshBambuStatus();
@@ -68,19 +73,78 @@ public partial class MainWindow : Window
         _studioMonitor.Tick += StudioMonitor_Tick;
         _studioMonitor.Start();
         Closed += (_, _) => _studioMonitor.Stop();
-        Loaded += (_, _) =>
+        Loaded += MainWindow_Loaded;
+    }
+
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (_lastStudioRunning == true)
         {
-            if (_lastStudioRunning == true)
+            ShowStudioOpenWarning();
+        }
+
+        if (StartupUpdateChecksEnabled)
+        {
+            await CheckStartupUpdatesAsync();
+        }
+    }
+
+    private async Task CheckStartupUpdatesAsync()
+    {
+        await Task.WhenAll(CheckStartupAppUpdateAsync(), CheckStartupLibraryUpdatesAsync());
+    }
+
+    private async Task CheckStartupAppUpdateAsync()
+    {
+        try
+        {
+            var release = await UpdateService.CheckAsync();
+            if (!UpdateService.IsNewer(release))
             {
-                ShowStudioOpenWarning();
+                return;
             }
-        };
+
+            _availableAppUpdate = release;
+            AppUpdateNoticeText.Text = $"BFI {release.Version.ToString(3)} is available.";
+            AppUpdateNotice.Visibility = Visibility.Visible;
+            RefreshStartupNotificationsPanel();
+        }
+        catch (Exception ex)
+        {
+            Log($"Startup BFI update check failed: {ex.Message}");
+        }
+    }
+
+    private async Task CheckStartupLibraryUpdatesAsync()
+    {
+        try
+        {
+            using var service = new ManufacturerLibraryUpdateService();
+            var catalog = await service.GetCatalogAsync(ManufacturerLibraryStore.ManagedDirectory);
+            var state = ManufacturerLibraryCatalogStateStore.Load();
+            var newPackageIds = state.HasSavedState
+                ? catalog.Entries
+                    .Select(entry => entry.Package.PackageId)
+                    .Where(packageId => !state.KnownPackageIds.Contains(packageId))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!state.HasSavedState && catalog.InstalledCount > 0)
+            {
+                ManufacturerLibraryCatalogStateStore.Save(catalog.Entries.Select(entry => entry.Package.PackageId));
+            }
+            _availableLibraryCatalog = catalog;
+            _newLibraryPackageIds = newPackageIds;
+            UpdateLibraryNotice(catalog, newPackageIds);
+        }
+        catch (Exception ex)
+        {
+            Log($"Startup filament library check failed: {ex.Message}");
+        }
     }
 
     private async void CheckForUpdates_Click(object sender, RoutedEventArgs e)
     {
-        UpdateButton.IsEnabled = false;
-        LibraryUpdateButton.IsEnabled = false;
+        SetUpdateActionsEnabled(false);
         UpdateButton.Content = "Checking...";
         try
         {
@@ -96,23 +160,8 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var answer = MessageBox.Show(
-                this,
-                $"Version {release.Version.ToString(3)} is available on GitHub.{Environment.NewLine}{Environment.NewLine}" +
-                "Download and install it now? The importer will close and reopen automatically.",
-                "Update available",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Information);
-            if (answer != MessageBoxResult.Yes)
-            {
-                return;
-            }
-
-            UpdateButton.Content = "Downloading...";
-            var stagedExecutable = await UpdateService.DownloadAndExtractAsync(release);
-            UpdateButton.Content = "Installing...";
-            UpdateService.LaunchUpdater(stagedExecutable);
-            Application.Current.Shutdown();
+            _availableAppUpdate = release;
+            await DownloadAndInstallAppUpdateAsync(release);
         }
         catch (Exception ex)
         {
@@ -126,49 +175,93 @@ public partial class MainWindow : Window
         }
         finally
         {
-            UpdateButton.Content = "Update app";
-            UpdateButton.IsEnabled = true;
-            LibraryUpdateButton.IsEnabled = true;
+            UpdateButton.Content = "Update BFI";
+            SetUpdateActionsEnabled(true);
         }
+    }
+
+    private async void DownloadAvailableAppUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_availableAppUpdate is null)
+        {
+            CheckForUpdates_Click(sender, e);
+            return;
+        }
+
+        SetUpdateActionsEnabled(false);
+        try
+        {
+            await DownloadAndInstallAppUpdateAsync(_availableAppUpdate);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                ex.Message + Environment.NewLine + Environment.NewLine + "You can also download the latest release directly from GitHub.",
+                "Update failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Log(ex.ToString());
+        }
+        finally
+        {
+            UpdateButton.Content = "Update BFI";
+            SetUpdateActionsEnabled(true);
+        }
+    }
+
+    private async Task DownloadAndInstallAppUpdateAsync(UpdateRelease release)
+    {
+        var answer = MessageBox.Show(
+            this,
+            $"Version {release.Version.ToString(3)} is available on GitHub.{Environment.NewLine}{Environment.NewLine}" +
+            "Download and install it now? The importer will close and reopen automatically.",
+            "BFI update available",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information);
+        if (answer != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        UpdateButton.Content = "Downloading...";
+        var stagedExecutable = await UpdateService.DownloadAndExtractAsync(release);
+        UpdateButton.Content = "Installing...";
+        UpdateService.LaunchUpdater(stagedExecutable);
+        Application.Current.Shutdown();
     }
 
     private async void CheckLibraryUpdates_Click(object sender, RoutedEventArgs e)
     {
-        LibraryUpdateButton.IsEnabled = false;
-        UpdateButton.IsEnabled = false;
+        SetUpdateActionsEnabled(false);
         LibraryUpdateButton.Content = "Checking...";
         var libraryDirectory = ManufacturerLibraryStore.ManagedDirectory;
         try
         {
             using var service = new ManufacturerLibraryUpdateService();
-            var check = await service.CheckAsync(libraryDirectory);
-            if (check.Updates.Count == 0)
-            {
-                MessageBox.Show(
-                    this,
-                    $"All {check.CurrentCount} manufacturer libraries are current at catalog version {check.CatalogVersion}.",
-                    "Libraries are current",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-                return;
-            }
+            var catalog = await service.GetCatalogAsync(libraryDirectory);
+            var state = ManufacturerLibraryCatalogStateStore.Load();
+            var newlyPublishedPackageIds = state.HasSavedState
+                ? catalog.Entries
+                    .Select(entry => entry.Package.PackageId)
+                    .Where(packageId => !state.KnownPackageIds.Contains(packageId))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var newPackageIds = _newLibraryPackageIds
+                .Concat(newlyPublishedPackageIds)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            ManufacturerLibraryCatalogStateStore.Save(catalog.Entries.Select(entry => entry.Package.PackageId));
+            _availableLibraryCatalog = catalog;
+            _newLibraryPackageIds = newPackageIds;
 
-            var names = string.Join(Environment.NewLine, check.Updates.Select(entry => $"- {entry.DisplayName}"));
-            var answer = MessageBox.Show(
-                this,
-                $"Catalog version {check.CatalogVersion} has {check.Updates.Count} library update(s):{Environment.NewLine}{Environment.NewLine}" +
-                names + Environment.NewLine + Environment.NewLine +
-                "Download these package files now? This updates BFI's portable library folder only; it will not change Bambu Studio until you choose Install Selected.",
-                "Library updates available",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Information);
-            if (answer != MessageBoxResult.Yes)
+            var dialog = new LibraryCatalogWindow(catalog, newPackageIds) { Owner = this };
+            if (dialog.ShowDialog() != true)
             {
                 return;
             }
 
             LibraryUpdateButton.Content = "Downloading...";
-            var result = await service.InstallAsync(check);
+            var result = await service.InstallAsync(catalog, dialog.SelectedPackages);
             var loadedPackagePath = _package?.FilePath;
             if (!string.IsNullOrWhiteSpace(loadedPackagePath)
                 && result.UpdatedFiles.Contains(Path.GetFileName(loadedPackagePath), StringComparer.OrdinalIgnoreCase)
@@ -183,11 +276,15 @@ public partial class MainWindow : Window
             }
 
             Log($"Updated {result.UpdatedFiles.Count} manufacturer package file(s) to catalog {result.CatalogVersion}.");
+            var refreshedCatalog = await service.GetCatalogAsync(libraryDirectory);
+            _availableLibraryCatalog = refreshedCatalog;
+            _newLibraryPackageIds.Clear();
+            UpdateLibraryNotice(refreshedCatalog, _newLibraryPackageIds);
             MessageBox.Show(
                 this,
-                $"Updated {result.UpdatedFiles.Count} manufacturer library package(s) to catalog version {result.CatalogVersion}.{Environment.NewLine}{Environment.NewLine}" +
+                $"Downloaded {result.UpdatedFiles.Count} manufacturer library package(s) from catalog version {result.CatalogVersion}.{Environment.NewLine}{Environment.NewLine}" +
                 "The package files are ready. Use Import Filament Package or Load Repair Package when you want to apply them to Bambu Studio.",
-                "Libraries updated",
+                "Filament libraries downloaded",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
         }
@@ -195,7 +292,7 @@ public partial class MainWindow : Window
         {
             MessageBox.Show(
                 this,
-                "Windows blocked writing to BFI's Manufacturer Libraries folder. Reopen BFI as Administrator or move the portable BFI folder to a writable location.",
+                "Windows blocked writing to BFI's managed Manufacturer Libraries folder.",
                 "Library update needs access",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
@@ -212,10 +309,86 @@ public partial class MainWindow : Window
         }
         finally
         {
-            LibraryUpdateButton.Content = "Update libraries";
-            LibraryUpdateButton.IsEnabled = true;
-            UpdateButton.IsEnabled = true;
+            LibraryUpdateButton.Content = "Download & Update Filament Libraries";
+            SetUpdateActionsEnabled(true);
         }
+    }
+
+    private void UpdateLibraryNotice(
+        ManufacturerLibraryCatalog catalog,
+        IReadOnlySet<string> newPackageIds)
+    {
+        if (catalog.InstalledCount == 0)
+        {
+            LibraryUpdateNoticeText.Text = "Filament libraries are available. Choose which manufacturers you want to download.";
+            LibraryUpdateNotice.Visibility = Visibility.Visible;
+        }
+        else if (catalog.Updates.Count > 0 && newPackageIds.Count > 0)
+        {
+            LibraryUpdateNoticeText.Text =
+                $"{catalog.Updates.Count} installed filament library {Pluralize(catalog.Updates.Count, "update", "updates")} and " +
+                $"{newPackageIds.Count} new filament {Pluralize(newPackageIds.Count, "library is", "libraries are")} available.";
+            LibraryUpdateNotice.Visibility = Visibility.Visible;
+        }
+        else if (catalog.Updates.Count > 0)
+        {
+            LibraryUpdateNoticeText.Text =
+                $"Updates are available for {catalog.Updates.Count} installed filament {Pluralize(catalog.Updates.Count, "library", "libraries")}.";
+            LibraryUpdateNotice.Visibility = Visibility.Visible;
+        }
+        else if (newPackageIds.Count > 0)
+        {
+            LibraryUpdateNoticeText.Text = "New Filament Libraries are available.";
+            LibraryUpdateNotice.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            LibraryUpdateNotice.Visibility = Visibility.Collapsed;
+        }
+
+        RefreshStartupNotificationsPanel();
+    }
+
+    private static string Pluralize(int count, string singular, string plural) => count == 1 ? singular : plural;
+
+    private void SetUpdateActionsEnabled(bool isEnabled)
+    {
+        UpdateButton.IsEnabled = isEnabled;
+        LibraryUpdateButton.IsEnabled = isEnabled;
+    }
+
+    private void DismissAppUpdateNotice_Click(object sender, RoutedEventArgs e)
+    {
+        AppUpdateNotice.Visibility = Visibility.Collapsed;
+        RefreshStartupNotificationsPanel();
+    }
+
+    private void DismissLibraryUpdateNotice_Click(object sender, RoutedEventArgs e)
+    {
+        if (_availableLibraryCatalog is not null)
+        {
+            try
+            {
+                ManufacturerLibraryCatalogStateStore.Save(
+                    _availableLibraryCatalog.Entries.Select(entry => entry.Package.PackageId));
+                _newLibraryPackageIds.Clear();
+            }
+            catch (Exception ex)
+            {
+                Log($"Filament library notification state could not be saved: {ex.Message}");
+            }
+        }
+
+        LibraryUpdateNotice.Visibility = Visibility.Collapsed;
+        RefreshStartupNotificationsPanel();
+    }
+
+    private void RefreshStartupNotificationsPanel()
+    {
+        StartupNotificationsPanel.Visibility =
+            AppUpdateNotice.Visibility == Visibility.Visible || LibraryUpdateNotice.Visibility == Visibility.Visible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     private void RefreshLibrary_Click(object sender, RoutedEventArgs e)

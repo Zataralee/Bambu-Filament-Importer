@@ -162,18 +162,18 @@ var testPaths = new BambuPaths(roaming, program);
 try
 {
     var libraryUpdateFolder = Path.Combine(sandbox, "Manufacturer Libraries");
-    var bundledLibraryFolder = Path.Combine(sandbox, "Bundled Manufacturer Libraries");
-    Directory.CreateDirectory(bundledLibraryFolder);
+    var legacyLibraryFolder = Path.Combine(sandbox, "Legacy Manufacturer Libraries");
+    Directory.CreateDirectory(legacyLibraryFolder);
     var indexedSunlu = manufacturerIndex.Packages.First(entry => entry.FileName == "SUNLU.bflib");
     var indexedOverture = manufacturerIndex.Packages.First(entry => entry.FileName == "Overture.bflib");
     foreach (var entry in new[] { indexedSunlu, indexedOverture })
     {
         File.Copy(Path.Combine(projectRoot, "packages", "manufacturers", entry.FileName),
-            Path.Combine(bundledLibraryFolder, entry.FileName));
+            Path.Combine(legacyLibraryFolder, entry.FileName));
     }
-    Check(ManufacturerLibraryStore.SeedBundledLibraries(libraryUpdateFolder, bundledLibraryFolder) == 2
-        && ManufacturerLibraryStore.SeedBundledLibraries(libraryUpdateFolder, bundledLibraryFolder) == 0,
-        "bundled libraries seed managed folder once");
+    Check(ManufacturerLibraryStore.MigrateLegacyLibraries(libraryUpdateFolder, legacyLibraryFolder) == 2
+        && ManufacturerLibraryStore.MigrateLegacyLibraries(libraryUpdateFolder, legacyLibraryFolder) == 0,
+        "legacy libraries migrate to managed folder once");
     File.Delete(Path.Combine(libraryUpdateFolder, indexedOverture.FileName));
     var updateIndex = new ManufacturerLibraryIndex
     {
@@ -187,22 +187,62 @@ try
     using (var updateClient = new HttpClient(new FakeHttpMessageHandler(new Dictionary<string, byte[]>
     {
         [fakeIndexUrl] = JsonSerializer.SerializeToUtf8Bytes(updateIndex),
+        [fakePackageBaseUrl + indexedSunlu.FileName] = File.ReadAllBytes(
+            Path.Combine(projectRoot, "packages", "manufacturers", indexedSunlu.FileName)),
         [fakePackageBaseUrl + indexedOverture.FileName] = File.ReadAllBytes(
             Path.Combine(projectRoot, "packages", "manufacturers", indexedOverture.FileName))
     })))
     using (var updateService = new ManufacturerLibraryUpdateService(updateClient, fakeIndexUrl, fakePackageBaseUrl))
     {
-        var updateCheck = await updateService.CheckAsync(libraryUpdateFolder);
-        Check(updateCheck.CurrentCount == 1
-            && updateCheck.Updates.Count == 1
-            && updateCheck.Updates[0].FileName == indexedOverture.FileName, "library update detects only missing package");
-        var updateResult = await updateService.InstallAsync(updateCheck);
+        var optionalCatalog = await updateService.GetCatalogAsync(libraryUpdateFolder);
+        Check(optionalCatalog.CurrentCount == 1
+            && optionalCatalog.Updates.Count == 0
+            && optionalCatalog.Available.Count == 1
+            && optionalCatalog.Available[0].Package.FileName == indexedOverture.FileName,
+            "missing library remains optional instead of becoming an update");
+        var updateResult = await updateService.InstallAsync(optionalCatalog, [indexedOverture]);
         Check(updateResult.UpdatedFiles.SequenceEqual([indexedOverture.FileName])
             && PackageReader.Load(Path.Combine(libraryUpdateFolder, indexedOverture.FileName)).Manifest.PackageId == indexedOverture.PackageId,
-            "library update installs validated package");
-        var currentCheck = await updateService.CheckAsync(libraryUpdateFolder);
-        Check(currentCheck.Updates.Count == 0 && currentCheck.CurrentCount == 2, "library update is idempotent");
+            "selected optional library downloads as a validated package");
+        var currentCatalog = await updateService.GetCatalogAsync(libraryUpdateFolder);
+        Check(currentCatalog.Updates.Count == 0 && currentCatalog.CurrentCount == 2, "library download is idempotent");
+
+        File.WriteAllText(Path.Combine(libraryUpdateFolder, indexedOverture.FileName), "invalid package");
+        var repairCatalog = await updateService.GetCatalogAsync(libraryUpdateFolder);
+        Check(repairCatalog.Updates.Count == 1
+            && repairCatalog.Updates[0].Package.FileName == indexedOverture.FileName
+            && repairCatalog.Available.Count == 0,
+            "only an installed stale or damaged library reports an update");
+        _ = await updateService.InstallAsync(repairCatalog, [indexedOverture]);
+        var repairedCatalog = await updateService.GetCatalogAsync(libraryUpdateFolder);
+        Check(repairedCatalog.CurrentCount == 2 && repairedCatalog.Updates.Count == 0,
+            "installed library update returns catalog to current");
+
+        var selectiveLibraryFolder = Path.Combine(sandbox, "Selective Manufacturer Libraries");
+        var selectiveCatalog = await updateService.GetCatalogAsync(selectiveLibraryFolder);
+        _ = await updateService.InstallAsync(selectiveCatalog, [indexedSunlu]);
+        Check(File.Exists(Path.Combine(selectiveLibraryFolder, indexedSunlu.FileName))
+            && !File.Exists(Path.Combine(selectiveLibraryFolder, indexedOverture.FileName)),
+            "new user downloads only selected manufacturer libraries");
+
+        var updateChoice = new ManufacturerLibraryChoice(repairCatalog.Updates[0], false);
+        var availableChoice = new ManufacturerLibraryChoice(selectiveCatalog.Available[0], true);
+        Check(updateChoice.StatusText == "Updates Available" && updateChoice.IsSelected && updateChoice.CanDownload,
+            "installed update is labeled and preselected in library chooser");
+        Check(availableChoice.StatusText == "New Library" && !availableChoice.IsSelected && availableChoice.CanDownload,
+            "new optional library is labeled without automatic selection");
     }
+
+    var catalogStatePath = Path.Combine(sandbox, "library-catalog-state.json");
+    var emptyCatalogState = ManufacturerLibraryCatalogStateStore.Load(catalogStatePath);
+    Check(!emptyCatalogState.HasSavedState && emptyCatalogState.KnownPackageIds.Count == 0,
+        "new user has no previously seen library catalog");
+    ManufacturerLibraryCatalogStateStore.Save([indexedSunlu.PackageId], catalogStatePath);
+    var savedCatalogState = ManufacturerLibraryCatalogStateStore.Load(catalogStatePath);
+    Check(savedCatalogState.HasSavedState
+        && savedCatalogState.KnownPackageIds.SetEquals([indexedSunlu.PackageId])
+        && !savedCatalogState.KnownPackageIds.Contains(indexedOverture.PackageId),
+        "library catalog state identifies newly published package IDs");
 
     var discoveryRoaming = Path.Combine(sandbox, "DiscoveryBambuStudio");
     var discoveryProgram = Path.Combine(sandbox, "DiscoveryProgramProfiles");
@@ -499,10 +539,35 @@ try
         var screenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow.png");
         var libraryScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "CurrentLibrary.png");
         var darkScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow-Dark.png");
-        RenderWindow(screenshotPath, libraryScreenshotPath, darkScreenshotPath);
+        var startupNoticeScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow-Startup-Notice.png");
+        var catalogScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "LibraryCatalogWindow.png");
+        var catalogPreview = new ManufacturerLibraryCatalog(
+            manufacturerIndex.CatalogVersion,
+            ManufacturerLibraryStore.ManagedDirectory,
+            manufacturerIndex.Packages.Take(5).Select((entry, index) => new ManufacturerLibraryCatalogEntry(
+                entry,
+                index switch
+                {
+                    0 => ManufacturerLibraryStatus.UpdateAvailable,
+                    1 => ManufacturerLibraryStatus.Current,
+                    _ => ManufacturerLibraryStatus.Available
+                },
+                Path.Combine(ManufacturerLibraryStore.ManagedDirectory, entry.FileName),
+                index < 2 ? "2026.08.24.1" : null)).ToList());
+        RenderWindow(
+            screenshotPath,
+            libraryScreenshotPath,
+            darkScreenshotPath,
+            startupNoticeScreenshotPath,
+            catalogScreenshotPath,
+            catalogPreview);
         Check(File.Exists(screenshotPath) && new FileInfo(screenshotPath).Length > 50_000, "main window render");
         Check(File.Exists(libraryScreenshotPath) && new FileInfo(libraryScreenshotPath).Length > 50_000, "settings window render");
         Check(File.Exists(darkScreenshotPath) && new FileInfo(darkScreenshotPath).Length > 50_000, "dark mode render");
+        Check(File.Exists(startupNoticeScreenshotPath) && new FileInfo(startupNoticeScreenshotPath).Length > 50_000,
+            "startup update notification render");
+        Check(File.Exists(catalogScreenshotPath) && new FileInfo(catalogScreenshotPath).Length > 25_000,
+            "selectable library catalog render");
     }
 
     Console.WriteLine("All smoke tests passed.");
@@ -517,7 +582,13 @@ finally
     }
 }
 
-static void RenderWindow(string screenshotPath, string libraryScreenshotPath, string darkScreenshotPath)
+static void RenderWindow(
+    string screenshotPath,
+    string libraryScreenshotPath,
+    string darkScreenshotPath,
+    string startupNoticeScreenshotPath,
+    string catalogScreenshotPath,
+    ManufacturerLibraryCatalog catalogPreview)
 {
     Exception? renderError = null;
     var thread = new Thread(() =>
@@ -529,6 +600,7 @@ static void RenderWindow(string screenshotPath, string libraryScreenshotPath, st
             ThemeService.Apply(false);
             var window = new MainWindow
             {
+                StartupUpdateChecksEnabled = false,
                 Width = 1320,
                 Height = 840,
                 Left = -20000,
@@ -540,6 +612,17 @@ static void RenderWindow(string screenshotPath, string libraryScreenshotPath, st
             window.UpdateLayout();
             Directory.CreateDirectory(Path.GetDirectoryName(screenshotPath)!);
             SaveWindow(window, screenshotPath);
+
+            var startupNotifications = (System.Windows.Controls.StackPanel)window.FindName("StartupNotificationsPanel");
+            var libraryNotice = (System.Windows.Controls.Border)window.FindName("LibraryUpdateNotice");
+            var libraryNoticeText = (System.Windows.Controls.TextBlock)window.FindName("LibraryUpdateNoticeText");
+            libraryNoticeText.Text = "2 installed filament library updates and 1 new filament library are available.";
+            libraryNotice.Visibility = System.Windows.Visibility.Visible;
+            startupNotifications.Visibility = System.Windows.Visibility.Visible;
+            window.UpdateLayout();
+            SaveWindow(window, startupNoticeScreenshotPath);
+            libraryNotice.Visibility = System.Windows.Visibility.Collapsed;
+            startupNotifications.Visibility = System.Windows.Visibility.Collapsed;
 
             var tabs = (System.Windows.Controls.TabControl)window.FindName("MainTabs");
             tabs.SelectedIndex = 1;
@@ -559,6 +642,22 @@ static void RenderWindow(string screenshotPath, string libraryScreenshotPath, st
             profileNode.IsSelected = true;
             window.UpdateLayout();
             SaveWindow(window, libraryScreenshotPath);
+
+            var catalogWindow = new LibraryCatalogWindow(
+                catalogPreview,
+                new HashSet<string>([catalogPreview.Entries.Last().Package.PackageId], StringComparer.OrdinalIgnoreCase))
+            {
+                Owner = window,
+                Left = -19000,
+                Top = -19000,
+                ShowInTaskbar = false,
+                WindowStartupLocation = System.Windows.WindowStartupLocation.Manual
+            };
+            catalogWindow.Show();
+            catalogWindow.UpdateLayout();
+            SaveWindow(catalogWindow, catalogScreenshotPath);
+            catalogWindow.Close();
+
             ThemeService.Apply(true);
             window.UpdateLayout();
             SaveWindow(window, darkScreenshotPath);

@@ -45,9 +45,8 @@ jobs:
       - name: Assemble release bundle
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path './release/bundle/Manufacturer Libraries' -Force | Out-Null
+          New-Item -ItemType Directory -Path './release/bundle' -Force | Out-Null
           Copy-Item './release/app/BambuFilamentImporter.exe' './release/bundle/'
-          Copy-Item './packages/manufacturers/*.bflib' './release/bundle/Manufacturer Libraries/'
           Copy-Item './README.md','./LICENSE','./CHANGELOG.md' './release/bundle/'
           Compress-Archive -Path './release/bundle/*' -DestinationPath "./release/Bambu-Filament-Importer-$env:GITHUB_REF_NAME-win-x64.zip"
 

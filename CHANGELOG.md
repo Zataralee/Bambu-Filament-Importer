@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.9 - 2026-08-29
+
+- Added silent startup checks with in-app notifications for BFI releases, installed-library updates, and newly published filament libraries.
+- Replaced the all-or-nothing library updater with a searchable manufacturer chooser that distinguishes Available, Installed, New Library, and Updates Available states.
+- Limited update notifications to manufacturer libraries already downloaded by the user while keeping every optional library visible in the chooser.
+- Removed manufacturer packages from application release bundles; selected packages now download independently into the managed Local AppData library folder.
+- Added one-time migration for package files left beside older portable BFI versions.
+
 ## 0.4.8 - 2026-08-29
 
 - Moved active manufacturer packages to one managed Local AppData folder shared by every portable BFI copy.
