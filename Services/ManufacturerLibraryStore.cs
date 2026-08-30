@@ -4,6 +4,11 @@ namespace BambuFilamentImporter.Services;
 
 public static class ManufacturerLibraryStore
 {
+    private static string LegacyMigrationMarker => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "BambuFilamentImporter",
+        "legacy-library-migration-v1.complete");
+
     public static string ManagedDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "BambuFilamentImporter",
@@ -11,7 +16,24 @@ public static class ManufacturerLibraryStore
 
     public static string LegacyBundledDirectory => Path.Combine(AppContext.BaseDirectory, "Manufacturer Libraries");
 
-    public static int MigrateLegacyLibraries() => MigrateLegacyLibraries(ManagedDirectory, LegacyBundledDirectory);
+    public static int MigrateLegacyLibraries() =>
+        MigrateLegacyLibrariesOnce(ManagedDirectory, LegacyBundledDirectory, LegacyMigrationMarker);
+
+    public static int MigrateLegacyLibrariesOnce(
+        string managedDirectory,
+        string legacyDirectory,
+        string migrationMarker)
+    {
+        if (File.Exists(migrationMarker))
+        {
+            return 0;
+        }
+
+        var migrated = MigrateLegacyLibraries(managedDirectory, legacyDirectory);
+        Directory.CreateDirectory(Path.GetDirectoryName(migrationMarker)!);
+        File.WriteAllText(migrationMarker, DateTime.UtcNow.ToString("O") + Environment.NewLine);
+        return migrated;
+    }
 
     public static int MigrateLegacyLibraries(string managedDirectory, string legacyDirectory)
     {

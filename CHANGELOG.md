@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.10 - 2026-08-29
+
+- Made migration from older bundled manufacturer folders a true one-time operation so a deliberately removed managed package cannot return on a later startup.
+
 ## 0.4.9 - 2026-08-29
 
 - Added silent startup checks with in-app notifications for BFI releases, installed-library updates, and newly published filament libraries.

@@ -171,10 +171,19 @@ try
         File.Copy(Path.Combine(projectRoot, "packages", "manufacturers", entry.FileName),
             Path.Combine(legacyLibraryFolder, entry.FileName));
     }
-    Check(ManufacturerLibraryStore.MigrateLegacyLibraries(libraryUpdateFolder, legacyLibraryFolder) == 2
-        && ManufacturerLibraryStore.MigrateLegacyLibraries(libraryUpdateFolder, legacyLibraryFolder) == 0,
+    var migrationMarker = Path.Combine(sandbox, "legacy-library-migration.complete");
+    Check(ManufacturerLibraryStore.MigrateLegacyLibrariesOnce(
+            libraryUpdateFolder,
+            legacyLibraryFolder,
+            migrationMarker) == 2,
         "legacy libraries migrate to managed folder once");
     File.Delete(Path.Combine(libraryUpdateFolder, indexedOverture.FileName));
+    Check(ManufacturerLibraryStore.MigrateLegacyLibrariesOnce(
+            libraryUpdateFolder,
+            legacyLibraryFolder,
+            migrationMarker) == 0
+        && !File.Exists(Path.Combine(libraryUpdateFolder, indexedOverture.FileName)),
+        "completed legacy migration does not restore removed libraries");
     var updateIndex = new ManufacturerLibraryIndex
     {
         Format = "bfi-manufacturer-library-index",
