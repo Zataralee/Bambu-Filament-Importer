@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.11 - 2026-08-29
+
+- Added explicit Select All Filaments and Deselect All Filaments commands to package review.
+- Added independently downloadable TINMORRY, ELEGOO, Creality, Atomic Filament, colorFabb, Proto-pasta, Siraya Tech, and HATCHBOX libraries.
+- Audited the existing Prusament package and corrected TPU 95A bed temperatures from its current official material page.
+- Expanded the online catalog from nine manufacturers and 243 products to 17 manufacturers and 423 product families.
+- Added sibling manufacturer catalog support and per-package versions so new libraries do not trigger false updates for every installed vendor.
+
 ## 0.4.10 - 2026-08-29
 
 - Made migration from older bundled manufacturer folders a true one-time operation so a deliberately removed managed package cannot return on a later startup.

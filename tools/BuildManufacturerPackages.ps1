@@ -84,6 +84,32 @@ function Write-JsonFile([string]$Path, [object]$Value) {
 }
 
 $catalog = Get-Content -LiteralPath $CatalogPath -Raw | ConvertFrom-Json
+$catalogVersions = [System.Collections.Generic.List[string]]::new()
+$catalogVersions.Add([string]$catalog.version)
+
+if ([System.IO.Path]::GetFileName($CatalogPath).Equals('manufacturers.json', [System.StringComparison]::OrdinalIgnoreCase)) {
+    $siblingCatalogs = @(
+        Get-ChildItem -LiteralPath (Split-Path -Parent $CatalogPath) -Filter 'manufacturers.*.json' -File |
+            Sort-Object Name
+    )
+    foreach ($siblingCatalogPath in $siblingCatalogs) {
+        $siblingCatalog = Get-Content -LiteralPath $siblingCatalogPath.FullName -Raw | ConvertFrom-Json
+        $catalogVersions.Add([string]$siblingCatalog.version)
+        $catalog.manufacturers = @($catalog.manufacturers) + @($siblingCatalog.manufacturers)
+    }
+}
+
+$duplicateManufacturers = @($catalog.manufacturers | Group-Object manufacturer | Where-Object Count -gt 1)
+$duplicatePackageIds = @($catalog.manufacturers | Group-Object packageId | Where-Object Count -gt 1)
+$duplicateOutputFiles = @($catalog.manufacturers | Group-Object outputFile | Where-Object Count -gt 1)
+if ($duplicateManufacturers.Count -gt 0 -or $duplicatePackageIds.Count -gt 0 -or $duplicateOutputFiles.Count -gt 0) {
+    throw 'Manufacturer catalogs contain duplicate manufacturer names, package IDs, or output file names.'
+}
+
+$catalogVersion = @(
+    $catalogVersions
+    $catalog.manufacturers | ForEach-Object { [string]$_.version }
+) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Descending | Select-Object -First 1
 New-Item -ItemType Directory -Path $OutputFolder -Force | Out-Null
 
 foreach ($manufacturer in $catalog.manufacturers) {
@@ -168,7 +194,7 @@ foreach ($manufacturer in $catalog.manufacturers) {
             packageId = [string]$manufacturer.packageId
             displayName = [string]$manufacturer.displayName
             manufacturer = [string]$manufacturer.manufacturer
-            version = [string]$catalog.version
+            version = if ([string]::IsNullOrWhiteSpace([string]$manufacturer.version)) { [string]$catalog.version } else { [string]$manufacturer.version }
             createdUtc = (Get-Date).ToUniversalTime().ToString('o')
             printerNeutral = $true
             compatibilityNote = 'Printer-neutral manufacturer definitions. The importer discovers configured printer models and nozzle sizes from Bambu Studio, then creates compatible per-printer presets during installation. Manufacturer recommendations are starting points; calibrate flow ratio and maximum volumetric speed for each spool and nozzle.'
@@ -376,7 +402,7 @@ $libraryIndexPackages = @(
 $libraryIndex = [ordered]@{
     format = 'bfi-manufacturer-library-index'
     formatVersion = 1
-    catalogVersion = [string]$catalog.version
+    catalogVersion = [string]$catalogVersion
     generatedUtc = (Get-Date).ToUniversalTime().ToString('o')
     packages = $libraryIndexPackages
 }

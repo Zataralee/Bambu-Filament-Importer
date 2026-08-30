@@ -1,9 +1,45 @@
 {
   "format": "bfi-manufacturer-library-index",
   "formatVersion": 1,
-  "catalogVersion": "2026.08.29.2",
-  "generatedUtc": "2026-08-29T20:44:19.8943822Z",
+  "catalogVersion": "2026.08.29.3",
+  "generatedUtc": "2026-08-30T03:34:52.2390330Z",
   "packages": [
+    {
+      "fileName": "Atomic-Filament.bflib",
+      "packageId": "atomic-filament-neutral-2026-08",
+      "displayName": "Atomic Filament Library",
+      "manufacturer": "Atomic Filament",
+      "version": "2026.08.29.1",
+      "profileCount": 11,
+      "sha256": "4A15BE3948F4C72C383B9555EB7A0E4F584F673C0D8FC6A072412531BF3011C2"
+    },
+    {
+      "fileName": "colorFabb.bflib",
+      "packageId": "colorfabb-neutral-2026-08",
+      "displayName": "colorFabb Filament Library",
+      "manufacturer": "colorFabb",
+      "version": "2026.08.29.1",
+      "profileCount": 29,
+      "sha256": "04C859387A807B465C74A54505064FF0577209897164B527F972949ACF1A52E1"
+    },
+    {
+      "fileName": "Creality.bflib",
+      "packageId": "creality-neutral-2026-08",
+      "displayName": "Creality Filament Library",
+      "manufacturer": "Creality",
+      "version": "2026.08.29.1",
+      "profileCount": 22,
+      "sha256": "318FD06C8846EA986EE18C74B3A52AF2FA060580234E01BA6E0D486C20E4701E"
+    },
+    {
+      "fileName": "ELEGOO.bflib",
+      "packageId": "elegoo-neutral-2026-08",
+      "displayName": "ELEGOO Filament Library",
+      "manufacturer": "ELEGOO",
+      "version": "2026.08.29.1",
+      "profileCount": 32,
+      "sha256": "961FEBC51074023BBB923AB0F46A8B2123A3715D822EEEBBF34C626D8FFCCFB9"
+    },
     {
       "fileName": "eSUN.bflib",
       "packageId": "esun-x1c-p1s-2026-08",
@@ -11,7 +47,7 @@
       "manufacturer": "eSUN",
       "version": "2026.08.29.2",
       "profileCount": 36,
-      "sha256": "965E75BB81524204097718426C3C94B09F2C4BE1E66925FEC9C199E5EB73A8D7"
+      "sha256": "064EC0EDDB05EF47E0145030BD737B0B82AF24F6CB705C6AF4B2C9301058EE08"
     },
     {
       "fileName": "Fiberlogy.bflib",
@@ -20,7 +56,7 @@
       "manufacturer": "Fiberlogy",
       "version": "2026.08.29.2",
       "profileCount": 25,
-      "sha256": "B2FFFB806C6AB467D8A9DD950FB624A91EC58537476AD266BB1B248A676F1E79"
+      "sha256": "B1E4AAFDD471E550E073875C3FA7058EAFE8ADCD0766CA805587EB778CD06093"
     },
     {
       "fileName": "Fillamentum.bflib",
@@ -29,7 +65,16 @@
       "manufacturer": "Fillamentum",
       "version": "2026.08.29.2",
       "profileCount": 20,
-      "sha256": "F5320F8EFE773EB5602712DF6C0684DD1C7938412E8D768A790D0DB38EDF5407"
+      "sha256": "04A323BDC5F6A4694AD62E10AD87054CBFBE74E7D3F6261EF31C5ECD89905C35"
+    },
+    {
+      "fileName": "HATCHBOX.bflib",
+      "packageId": "hatchbox-neutral-2026-08",
+      "displayName": "HATCHBOX Filament Library",
+      "manufacturer": "HATCHBOX",
+      "version": "2026.08.29.1",
+      "profileCount": 8,
+      "sha256": "873C81C878E40BB7AF8F2742AC48D1601B1E84CD213D393F0AB4BD2D56416BA8"
     },
     {
       "fileName": "MatterHackers.bflib",
@@ -38,7 +83,7 @@
       "manufacturer": "MatterHackers",
       "version": "2026.08.29.2",
       "profileCount": 16,
-      "sha256": "015E6212E3EC0477D02AA5D3E0D142D2E0F3A3937069C2436C59F1A7A362A9FB"
+      "sha256": "5B1123A569CE087F57E0DF83C7B2E4BFD2CD5EF6BAABE9829CAA1FAD0F74BCE2"
     },
     {
       "fileName": "Overture.bflib",
@@ -47,7 +92,7 @@
       "manufacturer": "Overture",
       "version": "2026.08.29.2",
       "profileCount": 14,
-      "sha256": "233C6038E6F2D752DA3CF2C0FA54A982A34E073E0DA4C073C3FDDE71EE9DD017"
+      "sha256": "7C81AB7101BA982074578B7D918086E3DFF7F1CA63704568289156A522C81213"
     },
     {
       "fileName": "Polymaker.bflib",
@@ -56,16 +101,34 @@
       "manufacturer": "Polymaker",
       "version": "2026.08.29.2",
       "profileCount": 48,
-      "sha256": "62029F4D0499424588E2C9A580DC44DA1185534ABE9420EB67AD33EAE5D6B8CE"
+      "sha256": "C85B4D13565560BC255679CE45B2E3824A353CEE2108D585B49882688D1BD4CA"
+    },
+    {
+      "fileName": "Proto-pasta.bflib",
+      "packageId": "proto-pasta-neutral-2026-08",
+      "displayName": "Proto-pasta Filament Library",
+      "manufacturer": "Proto-pasta",
+      "version": "2026.08.29.1",
+      "profileCount": 27,
+      "sha256": "0DF0C7D9EA451DEA15CAA43B5BE9280287B50CA04B2159056ACB1757B7B0DE14"
     },
     {
       "fileName": "Prusament.bflib",
       "packageId": "prusament-x1c-p1s-2026-08",
       "displayName": "Prusament Filament Library",
       "manufacturer": "Prusament",
-      "version": "2026.08.29.2",
+      "version": "2026.08.29.3",
       "profileCount": 22,
-      "sha256": "7BCB6935EC05C6A9285A2E85427A5323ECFA1217AEE980DB9B1B3899A107ABF6"
+      "sha256": "5E42072060D6E6521A88A75058B2DC1CB5BB7EDAD3B2AFFB2405A4CE3B9C7D24"
+    },
+    {
+      "fileName": "Siraya-Tech.bflib",
+      "packageId": "siraya-tech-neutral-2026-08",
+      "displayName": "Siraya Tech Filament Library",
+      "manufacturer": "Siraya Tech",
+      "version": "2026.08.29.1",
+      "profileCount": 23,
+      "sha256": "DD74D0F40D20952D0F45D38EF98455D2D8A976D3C12617037F36DFC9EF25C5F5"
     },
     {
       "fileName": "Spectrum-Filaments.bflib",
@@ -74,7 +137,7 @@
       "manufacturer": "Spectrum",
       "version": "2026.08.29.2",
       "profileCount": 22,
-      "sha256": "0020EB15D6F79DF8D34DEEDEB9D78D03C0226E91DDDE250F4712E33BCAE5B7ED"
+      "sha256": "F2715F56D85782D320C54CEA6E15DBB55A8B92CB65398D97674D018D5BBA6B86"
     },
     {
       "fileName": "SUNLU.bflib",
@@ -83,7 +146,16 @@
       "manufacturer": "SUNLU",
       "version": "2026.08.29.2",
       "profileCount": 40,
-      "sha256": "CEF8CCCC4222773A9A83D3403D58340D9BDB37B5F489E55ECB51B0710BD14423"
+      "sha256": "C04A299033D497D96AAA69204FC28542359AA409DFEE35FD6C6CFBD3F4CBCBF4"
+    },
+    {
+      "fileName": "TINMORRY.bflib",
+      "packageId": "tinmorry-neutral-2026-08",
+      "displayName": "TINMORRY Filament Library",
+      "manufacturer": "TINMORRY",
+      "version": "2026.08.29.1",
+      "profileCount": 28,
+      "sha256": "45DCD45BD37E94EFBC8E68DB28FF5ED397FDB6E3AF10F847BA242476133D74EA"
     }
   ]
 }

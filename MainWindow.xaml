@@ -56,7 +56,7 @@
             <StackPanel DockPanel.Dock="Left">
                 <TextBlock Text="Bambu Filament Importer" FontSize="27" FontWeight="SemiBold"/>
                 <TextBlock Text="Manufacturer profile packages and local Bambu Studio library management" FontSize="14" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4,0,0"/>
-                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.10 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
+                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.11 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -155,10 +155,11 @@
                             <Button Content="Clear" Click="ClearPrinters_Click" MinWidth="0" Margin="0"/>
                         </StackPanel>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                        <WrapPanel Margin="0,0,0,18">
                             <Button Content="Skip Duplicates" Click="SkipDuplicates_Click" MinWidth="0"/>
-                            <Button Content="Select All" Click="SelectAll_Click" MinWidth="0" Margin="0"/>
-                        </StackPanel>
+                            <Button x:Name="SelectAllFilamentsButton" Content="Select All Filaments" Click="SelectAllFilaments_Click" MinWidth="0"/>
+                            <Button x:Name="DeselectAllFilamentsButton" Content="Deselect All Filaments" Click="DeselectAllFilaments_Click" MinWidth="0" Margin="0"/>
+                        </WrapPanel>
 
                         <TextBlock Text="Locations" FontWeight="SemiBold" Margin="0,0,0,6"/>
                         <TextBlock Text="Device / AMS uses the manufacturer catalog. Project Library uses account-level user presets. Both keeps manufacturer grouping and adds profiles to the project dropdown." TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,0,0,18"/>

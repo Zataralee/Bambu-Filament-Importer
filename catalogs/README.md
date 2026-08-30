@@ -1,6 +1,6 @@
 # Manufacturer Catalog
 
-This release contains 243 filament product families from nine manufacturers. Each `.bflib` is printer-neutral. The importer reads the printer models and nozzle variants enabled in the user's Bambu Studio setup and creates compatible child profiles at installation time.
+This release contains 423 filament product families from 17 manufacturers. Each `.bflib` is printer-neutral. The importer reads the printer models and nozzle variants enabled in the user's Bambu Studio setup and creates compatible child profiles at installation time.
 
 | Manufacturer | Products | Bambu Studio baseline | Package purpose | Official sources |
 | --- | ---: | --- | --- | --- |
@@ -13,11 +13,20 @@ This release contains 243 filament product families from nine manufacturers. Eac
 | Fiberlogy | 25 | None | Add aesthetic, engineering, flexible, composite, and support product families. | [Filament catalog](https://fiberlogy.com/en_US/c/Filaments/117/1/default/3), [printing and drying FAQ](https://fiberlogy.com/en/faq-2/) |
 | Spectrum Filaments | 22 | None | Add PLA, PETG, ABS, ASA, PA, PC, TPU, composite, fire-retardant, and support products. | [Technical downloads](https://spectrumfilaments.com/en/download/) |
 | Fillamentum | 20 | None | Add Extrafill, CPE, nylon, Flexfill, PP, Timberfill, Vinyl, and support products. | [Data sheets and printing guides](https://fillamentum.com/pages/data-sheets-and-3d-printing-guides/), [pocket printing guide](https://fillamentum.com/wp-content/uploads/2025/09/pocket-printing-guide.pdf) |
+| TINMORRY | 28 | None | Add consumer, high-speed, filled engineering, flexible, and specialty PETG products. | [Manufacturer site](https://tinmorry.net/) |
+| ELEGOO | 32 | Several built-in families | Fill gaps across ELEGOO's current PLA, PETG, ABS, ASA, PC, PAHT, PET, and TPU lines. | [Filament catalog](https://www.elegoo.com/collections/filaments) |
+| Creality | 22 | Several built-in families | Add Ender, Hyper, CR, Soleyin, and high-temperature engineering product lines. | [Official product sitemap](https://store.creality.com/sitemap_products.xml) |
+| Atomic Filament | 11 | None | Add the distinct PLA, PETG PRO, PCTG PRO, ABS, ASA, and composite formulations without duplicating colors. | [Manufacturer site](https://atomicfilament.com/) |
+| colorFabb | 29 | None | Add PLA/PHA, lightweight, copolyester, flexible, nylon, wood, mineral, metal, and functional product families. | [Official product sitemap](https://colorfabb.com/media/colorfabb_com/products.xml) |
+| Proto-pasta | 27 | None | Add HTPLA effects and composites plus PETG, HTPETG, PCTG, conductive, and TPU formulations. | [Product catalog](https://proto-pasta.com/collections/all) |
+| Siraya Tech | 23 | None | Add the complete current filament range across TPU, PEBA, ABS, ASA, PET, PETG, and PPA products. | [Filament catalog](https://siraya.tech/collections/filament) |
+| HATCHBOX | 8 | None | Add the current distinct PLA, PLA MAX, ABS, PETG, rapid PETG, TPU, PA, and PC material lines. | [Filament catalog](https://www.hatchbox3d.com/collections) |
 
 ## Data Policy
 
 - Temperatures, cooling, drying values, and enclosure or hardened-nozzle guidance come from official manufacturer product pages, technical sheets, or printing guides.
 - Flow ratio and maximum volumetric speed are conservative starting values because manufacturers generally do not publish Bambu-specific calibration values for every product.
 - Every setting remains editable in the importer after installation.
-- Materials requiring more than a 300 C nozzle are omitted because they are outside the normal X1C/P1S hot-end range and would create unsafe or unusable presets for the original target hardware.
-- New products and revised technical sheets should be updated in `manufacturers.json`, followed by package regeneration and validation.
+- Materials whose minimum usable nozzle temperature exceeds Bambu printer hardware limits are omitted; the importer otherwise preserves official ranges and lets Bambu Studio enforce the selected printer's machine limits.
+- New products and revised technical sheets should be updated in `manufacturers.json` or a sibling `manufacturers.*.json` catalog, followed by package regeneration and validation.
+- Prusament PEI 1010 is intentionally excluded because its required extrusion temperature is beyond the supported hot-end range of Bambu Studio printers.

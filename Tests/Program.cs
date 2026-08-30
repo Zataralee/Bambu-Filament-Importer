@@ -25,8 +25,16 @@ Check(overturePackage.Manifest.SourceUrls.Count >= 2, "manufacturer source attri
 var manufacturerPackages = Directory.EnumerateFiles(Path.Combine(projectRoot, "packages", "manufacturers"), "*.bflib")
     .Select(PackageReader.Load)
     .ToList();
-Check(manufacturerPackages.Count == 9, "manufacturer package count");
-Check(manufacturerPackages.Sum(item => item.Manifest.Profiles.Count) == 243, "manufacturer filament total");
+Check(manufacturerPackages.Count == 17, "manufacturer package count");
+Check(manufacturerPackages.Sum(item => item.Manifest.Profiles.Count) == 423, "manufacturer filament total");
+var requestedManufacturers = new[]
+{
+    "TINMORRY", "ELEGOO", "Creality", "Atomic Filament", "colorFabb",
+    "Proto-pasta", "Siraya Tech", "HATCHBOX", "Prusament"
+};
+Check(requestedManufacturers.All(requested => manufacturerPackages.Count(package =>
+        package.Manifest.Manufacturer.Equals(requested, StringComparison.OrdinalIgnoreCase)) == 1),
+    "requested manufacturer packages");
 var manufacturerIds = manufacturerPackages
     .SelectMany(item => item.Manifest.Profiles.Select(profile => (Package: item, Profile: profile)))
     .Where(item => item.Profile.Name.EndsWith("@base", StringComparison.OrdinalIgnoreCase))
@@ -49,7 +57,7 @@ var manufacturerIndexPath = Path.Combine(projectRoot, "packages", "manufacturers
 var manufacturerIndex = JsonSerializer.Deserialize<ManufacturerLibraryIndex>(File.ReadAllText(manufacturerIndexPath),
     new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 Check(manufacturerIndex.Format == "bfi-manufacturer-library-index"
-    && manufacturerIndex.Packages.Count == 9, "manufacturer update index");
+    && manufacturerIndex.Packages.Count == 17, "manufacturer update index");
 Check(manufacturerIndex.Packages.All(entry =>
     Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(projectRoot, "packages", "manufacturers", entry.FileName))))
         .Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase)), "manufacturer update hashes");
@@ -619,6 +627,11 @@ static void RenderWindow(
             };
             window.Show();
             window.UpdateLayout();
+            if (window.FindName("SelectAllFilamentsButton") is not System.Windows.Controls.Button
+                || window.FindName("DeselectAllFilamentsButton") is not System.Windows.Controls.Button)
+            {
+                throw new InvalidOperationException("Import filament selection controls did not render.");
+            }
             Directory.CreateDirectory(Path.GetDirectoryName(screenshotPath)!);
             SaveWindow(window, screenshotPath);
 

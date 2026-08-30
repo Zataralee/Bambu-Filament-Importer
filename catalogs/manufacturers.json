@@ -134,6 +134,7 @@
       "displayName": "Prusament Filament Library",
       "packageId": "prusament-x1c-p1s-2026-08",
       "outputFile": "Prusament.bflib",
+      "version": "2026.08.29.3",
       "sourceUrls": ["https://prusament.com/materials/", "https://prusament.com/materials/prusament-pc-blend/", "https://prusament.com/materials/prusament-pa11/"],
       "products": [
         {"name":"Prusament PLA","family":"PLA","nozzleLow":200,"nozzleHigh":220,"nozzle":215,"bedLow":40,"bedHigh":60,"bed":55,"fanMin":100,"fanMax":100,"flow":0.98,"maxVolumetricSpeed":16,"dryingTemp":45,"dryingHours":6,"abrasive":false,"enclosure":false},
@@ -155,7 +156,7 @@
         {"name":"Prusament PC Space Grade","family":"PC","nozzleLow":280,"nozzleHigh":300,"nozzle":290,"bedLow":100,"bedHigh":120,"bed":110,"fanMin":0,"fanMax":20,"flow":0.95,"maxVolumetricSpeed":6,"dryingTemp":75,"dryingHours":8,"abrasive":false,"enclosure":true},
         {"name":"Prusament PA11","family":"PA","nozzleLow":265,"nozzleHigh":285,"nozzle":275,"bedLow":90,"bedHigh":110,"bed":100,"fanMin":0,"fanMax":20,"flow":0.94,"maxVolumetricSpeed":7,"dryingTemp":80,"dryingHours":12,"abrasive":false,"enclosure":true},
         {"name":"Prusament PA11 Carbon Fiber","family":"PA-CF","nozzleLow":265,"nozzleHigh":285,"nozzle":275,"bedLow":90,"bedHigh":110,"bed":100,"fanMin":0,"fanMax":20,"flow":0.94,"maxVolumetricSpeed":7,"dryingTemp":80,"dryingHours":12,"abrasive":true,"enclosure":true},
-        {"name":"Prusament TPU 95A","family":"TPU","nozzleLow":220,"nozzleHigh":240,"nozzle":230,"bedLow":40,"bedHigh":60,"bed":50,"fanMin":80,"fanMax":100,"flow":0.95,"maxVolumetricSpeed":4,"dryingTemp":55,"dryingHours":8,"abrasive":false,"enclosure":false},
+        {"name":"Prusament TPU 95A","family":"TPU","nozzleLow":220,"nozzleHigh":240,"nozzle":230,"bedLow":55,"bedHigh":75,"bed":65,"fanMin":80,"fanMax":100,"flow":0.95,"maxVolumetricSpeed":4,"dryingTemp":55,"dryingHours":8,"abrasive":false,"enclosure":false,"sourceUrl":"https://prusament.com/materials/prusament-tpu-95a/"},
         {"name":"Prusament PP Glass Fiber","family":"PP-GF","nozzleLow":255,"nozzleHigh":275,"nozzle":265,"bedLow":90,"bedHigh":110,"bed":100,"fanMin":0,"fanMax":20,"flow":0.95,"maxVolumetricSpeed":7,"dryingTemp":65,"dryingHours":8,"abrasive":true,"enclosure":true},
         {"name":"Prusament PP Carbon Fiber","family":"PP-CF","nozzleLow":255,"nozzleHigh":275,"nozzle":265,"bedLow":90,"bedHigh":110,"bed":100,"fanMin":0,"fanMax":20,"flow":0.95,"maxVolumetricSpeed":7,"dryingTemp":65,"dryingHours":8,"abrasive":true,"enclosure":true}
       ]

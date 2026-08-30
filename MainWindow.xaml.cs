@@ -40,7 +40,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.10" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.11" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -730,7 +730,7 @@ public partial class MainWindow : Window
         Log("Duplicate profiles unchecked.");
     }
 
-    private void SelectAll_Click(object sender, RoutedEventArgs e)
+    private void SelectAllFilaments_Click(object sender, RoutedEventArgs e)
     {
         if (_package is null)
         {
@@ -744,6 +744,22 @@ public partial class MainWindow : Window
 
         UpdateSummary();
         Log("All package profiles selected.");
+    }
+
+    private void DeselectAllFilaments_Click(object sender, RoutedEventArgs e)
+    {
+        if (_package is null)
+        {
+            return;
+        }
+
+        foreach (var profile in _package.Manifest.Profiles)
+        {
+            profile.IsSelected = false;
+        }
+
+        UpdateSummary();
+        Log("All package profiles deselected.");
     }
 
     private void SelectAllPrinters_Click(object sender, RoutedEventArgs e)

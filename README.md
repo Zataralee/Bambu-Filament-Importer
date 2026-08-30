@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.10 | By Zataralee**
+**Version 0.4.11 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -18,19 +18,27 @@ The importer identifies locally registered printer models from the user's own Ba
 
 ## Available Libraries
 
-BFI's online catalog currently provides nine independently downloadable manufacturer packages containing 243 product families. Libraries are selected inside BFI and are not bundled with the application download.
+BFI's online catalog currently provides 17 independently downloadable manufacturer packages containing 423 product families. Libraries are selected inside BFI and are not bundled with the application download.
 
 | Manufacturer | Products |
 | --- | ---: |
 | SUNLU | 40 |
 | Polymaker | 48 |
 | eSUN | 36 |
+| ELEGOO | 32 |
+| colorFabb | 29 |
+| TINMORRY | 28 |
+| Proto-pasta | 27 |
 | Fiberlogy | 25 |
+| Siraya Tech | 23 |
+| Creality | 22 |
 | Prusament | 22 |
 | Spectrum Filaments | 22 |
 | Fillamentum | 20 |
 | MatterHackers | 16 |
 | Overture | 14 |
+| Atomic Filament | 11 |
+| HATCHBOX | 8 |
 
 Official source references and catalog policy are documented in [catalogs/README.md](catalogs/README.md). Product families are represented once; color variants are not separate presets.
 
@@ -45,6 +53,7 @@ Official source references and catalog policy are documented in [catalogs/README
 - Displays and edits direct and inherited temperatures, cooling, drying, flow, retraction, and calibration values.
 - Renames and removes individual profiles, complete filaments, or manufacturers.
 - Detects duplicates and preserves existing compatible Bambu presets.
+- Selects or deselects every filament in a loaded package with one command.
 - Audits and repairs AMS filament IDs that are too long or collide after printer synchronization.
 - Creates complete `.bflbackup` library backups and merges them during restoration.
 - Creates safety backups before changing Bambu Studio files.

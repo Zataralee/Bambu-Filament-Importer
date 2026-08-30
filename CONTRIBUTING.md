@@ -20,7 +20,7 @@ Do not attach Bambu Studio configuration files without reviewing them for accoun
 
 Provide an official manufacturer product page, technical data sheet, printing guide, or safety data sheet. State which values are manufacturer recommendations and which values were calibrated experimentally.
 
-Catalog definitions belong in `catalogs/manufacturers.json`. SUNLU's original curated base profiles are retained in `catalogs/source` for reproducible migration to the printer-neutral package format.
+Catalog definitions belong in `catalogs/manufacturers.json` or a sibling `catalogs/manufacturers.*.json` file. SUNLU's original curated base profiles are retained in `catalogs/source` for reproducible migration to the printer-neutral package format.
 
 Regenerate packages after catalog changes:
 
