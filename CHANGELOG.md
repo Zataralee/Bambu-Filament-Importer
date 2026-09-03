@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.15 - 2026-09-02
+
+- Redesigned Report Bug as a compact, centered form with clearer hierarchy and a prominent Create Report action.
+- Fixed the report window's light and dark theme surfaces so labels, fields, and supporting text always retain readable contrast.
+- Placed expected and actual behavior side by side and condensed diagnostics and privacy details to eliminate unnecessary scrolling and dead space.
+- Added light and dark visual regression renders for the report window.
+
 ## 0.4.14 - 2026-09-02
 
 - Added H2C discovery and corrected shared H-series identifier handling for H2C, H2D, H2D Pro, and H2S.

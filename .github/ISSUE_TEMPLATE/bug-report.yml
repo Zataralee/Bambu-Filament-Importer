@@ -6,12 +6,12 @@ labels:
 body:
   - type: markdown
     attributes:
-      value: BFI 0.4.14 and newer can create a sanitized diagnostic ZIP from the Report Bug button. Do not upload Bambu Studio configuration files or unredacted account, printer, network, or access-code information.
+      value: BFI 0.4.15 and newer can create a sanitized diagnostic ZIP from the Report Bug button. Do not upload Bambu Studio configuration files or unredacted account, printer, network, or access-code information.
   - type: input
     id: importer-version
     attributes:
       label: Importer version
-      placeholder: 0.4.14
+      placeholder: 0.4.15
     validations:
       required: true
   - type: input

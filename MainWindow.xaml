@@ -56,7 +56,7 @@
             <StackPanel DockPanel.Dock="Left">
                 <TextBlock Text="Bambu Filament Importer" FontSize="27" FontWeight="SemiBold"/>
                 <TextBlock Text="Manufacturer profile packages and local Bambu Studio library management" FontSize="14" Foreground="{DynamicResource MutedTextBrush}" Margin="0,4,0,0"/>
-                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.14 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
+                <TextBlock x:Name="BuildInfoText" Text="Version 0.4.15 | By Zataralee" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" Margin="0,3,0,0"/>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

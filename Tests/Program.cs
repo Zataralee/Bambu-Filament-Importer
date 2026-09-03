@@ -715,6 +715,7 @@ try
         var startupNoticeScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow-Startup-Notice.png");
         var catalogScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "LibraryCatalogWindow.png");
         var bugReportScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "BugReportWindow.png");
+        var bugReportDarkScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "BugReportWindow-Dark.png");
         var catalogPreview = new ManufacturerLibraryCatalog(
             manufacturerIndex.CatalogVersion,
             ManufacturerLibraryStore.ManagedDirectory,
@@ -735,6 +736,7 @@ try
             startupNoticeScreenshotPath,
             catalogScreenshotPath,
             bugReportScreenshotPath,
+            bugReportDarkScreenshotPath,
             catalogPreview);
         Check(File.Exists(screenshotPath) && new FileInfo(screenshotPath).Length > 50_000, "main window render");
         Check(File.Exists(libraryScreenshotPath) && new FileInfo(libraryScreenshotPath).Length > 50_000, "settings window render");
@@ -744,7 +746,9 @@ try
         Check(File.Exists(catalogScreenshotPath) && new FileInfo(catalogScreenshotPath).Length > 25_000,
             "selectable library catalog render");
         Check(File.Exists(bugReportScreenshotPath) && new FileInfo(bugReportScreenshotPath).Length > 25_000,
-            "bug report window render");
+            "light bug report window render");
+        Check(File.Exists(bugReportDarkScreenshotPath) && new FileInfo(bugReportDarkScreenshotPath).Length > 25_000,
+            "dark bug report window render");
     }
 
     Console.WriteLine("All smoke tests passed.");
@@ -766,6 +770,7 @@ static void RenderWindow(
     string startupNoticeScreenshotPath,
     string catalogScreenshotPath,
     string bugReportScreenshotPath,
+    string bugReportDarkScreenshotPath,
     ManufacturerLibraryCatalog catalogPreview)
 {
     Exception? renderError = null;
@@ -865,16 +870,16 @@ static void RenderWindow(
             reportWindow.Show();
             reportWindow.UpdateLayout();
             SaveWindow(reportWindow, bugReportScreenshotPath);
-            reportWindow.Close();
 
             tabs.SelectedIndex = 0;
             ThemeService.Apply(true);
             window.InvalidateVisual();
             window.UpdateLayout();
-            window.Dispatcher.Invoke(
-                () => { },
-                System.Windows.Threading.DispatcherPriority.Render);
             SaveWindow(window, darkScreenshotPath);
+            reportWindow.InvalidateVisual();
+            reportWindow.UpdateLayout();
+            SaveWindow(reportWindow, bugReportDarkScreenshotPath);
+            reportWindow.Close();
             window.Close();
             app.Shutdown();
         }
