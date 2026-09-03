@@ -175,7 +175,8 @@ public sealed class PrinterTarget : INotifyPropertyChanged
     public string ProfileSuffix { get; init; } = "";
     public List<string> MachinePresetNames { get; init; } = [];
     public string NozzleSummary { get; init; } = "";
-    public string DisplayName => $"{ModelName} ({NozzleSummary} mm)";
+    public bool IsInferred { get; init; }
+    public string DisplayName => $"{ModelName} ({NozzleSummary} mm){(IsInferred ? " - inferred, review" : "")}";
     public bool IsSelected { get => _isSelected; set => SetField(ref _isSelected, value); }
 
     public event PropertyChangedEventHandler? PropertyChanged;

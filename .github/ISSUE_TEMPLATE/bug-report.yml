@@ -6,12 +6,12 @@ labels:
 body:
   - type: markdown
     attributes:
-      value: Do not upload Bambu Studio configuration files until you have removed account, printer, network, and access-code information.
+      value: BFI 0.4.14 and newer can create a sanitized diagnostic ZIP from the Report Bug button. Do not upload Bambu Studio configuration files or unredacted account, printer, network, or access-code information.
   - type: input
     id: importer-version
     attributes:
       label: Importer version
-      placeholder: 0.4.1
+      placeholder: 0.4.14
     validations:
       required: true
   - type: input
@@ -64,5 +64,5 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Sanitized logs or screenshots
-      description: Relevant entries from %LOCALAPPDATA%\BambuFilamentImporter\error.log may be pasted here after removing sensitive data.
+      label: Sanitized diagnostic package or screenshots
+      description: Attach the ZIP created by BFI's Report Bug button, or paste relevant sanitized details here.

@@ -14,20 +14,23 @@ public sealed record PrinterDiscoveryResult(
 
 public sealed class PrinterDiscoveryService
 {
-    private static readonly IReadOnlyDictionary<string, string> SerialPrefixModels =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> SerialPrefixModels =
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["00M"] = "Bambu Lab X1 Carbon",
-            ["00W"] = "Bambu Lab X1",
-            ["03W"] = "Bambu Lab X1E",
-            ["01S"] = "Bambu Lab P1P",
-            ["01P"] = "Bambu Lab P1S",
-            ["030"] = "Bambu Lab A1 mini",
-            ["039"] = "Bambu Lab A1",
-            ["22E"] = "Bambu Lab P2S",
-            ["093"] = "Bambu Lab H2S",
-            ["094"] = "Bambu Lab H2D",
-            ["239"] = "Bambu Lab H2D Pro"
+            ["00M"] = ["Bambu Lab X1 Carbon"],
+            ["00W"] = ["Bambu Lab X1"],
+            ["03W"] = ["Bambu Lab X1E"],
+            ["01S"] = ["Bambu Lab P1P"],
+            ["01P"] = ["Bambu Lab P1S"],
+            ["030"] = ["Bambu Lab A1 mini"],
+            ["039"] = ["Bambu Lab A1"],
+            ["22E"] = ["Bambu Lab P2S"],
+            ["20P"] = ["Bambu Lab X2D"],
+            ["26A"] = ["Bambu Lab A2L"],
+            ["093"] = ["Bambu Lab H2S"],
+            ["094"] = ["Bambu Lab H2C", "Bambu Lab H2D", "Bambu Lab H2D Pro", "Bambu Lab H2S"],
+            ["239"] = ["Bambu Lab H2D Pro"],
+            ["31B"] = ["Bambu Lab H2C"]
         };
 
     private readonly BambuPaths _paths;
@@ -70,6 +73,10 @@ public sealed class PrinterDiscoveryService
         {
             status += $" {unrecognizedCount} newer or unknown device identifier(s) could not be matched.";
         }
+        if (registeredModels.InferredDeviceCount > 0)
+        {
+            status += $" {registeredModels.InferredDeviceCount} model(s) were matched by comparing otherwise unknown devices with enabled local machine presets; review the selection before importing.";
+        }
 
         return new PrinterDiscoveryResult(
             targets,
@@ -104,7 +111,9 @@ public sealed class PrinterDiscoveryService
                 ModelName = configured.ModelName,
                 ProfileSuffix = GetProfileSuffix(configured.Vendor, configured.ModelName),
                 MachinePresetNames = matching.Select(machine => machine.PresetName).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
-                NozzleSummary = string.Join(", ", matching.Select(machine => machine.Nozzle).Distinct().OrderBy(ParseNozzle))
+                NozzleSummary = string.Join(", ", matching.Select(machine => machine.Nozzle).Distinct().OrderBy(ParseNozzle)),
+                IsInferred = configured.IsInferred,
+                IsSelected = !configured.IsInferred
             });
         }
 
@@ -198,17 +207,24 @@ public sealed class PrinterDiscoveryService
     {
         var resolved = new List<ConfiguredModel>();
         var resolvedDevices = 0;
+        var unresolvedDevices = new List<string>();
         foreach (var deviceId in deviceIds)
         {
-            if (!SerialPrefixModels.TryGetValue(deviceId[..3], out var expectedModel))
+            if (!SerialPrefixModels.TryGetValue(deviceId[..3], out var expectedModels))
             {
+                unresolvedDevices.Add(deviceId);
                 continue;
             }
 
-            var configured = configuredModels.FirstOrDefault(model =>
-                model.Vendor.Equals("BBL", StringComparison.OrdinalIgnoreCase)
-                && model.ModelName.Equals(expectedModel, StringComparison.OrdinalIgnoreCase));
-            configured ??= ResolveP1Alternative(expectedModel, configuredModels);
+            var configuredCandidates = configuredModels
+                .Where(model => model.Vendor.Equals("BBL", StringComparison.OrdinalIgnoreCase)
+                    && expectedModels.Contains(model.ModelName, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+            var configured = configuredCandidates.Count == 1 ? configuredCandidates[0] : null;
+            if (configured is null && expectedModels.Count == 1)
+            {
+                configured = ResolveP1Alternative(expectedModels[0], configuredModels);
+            }
             if (configured is not null)
             {
                 resolved.Add(configured);
@@ -216,16 +232,37 @@ public sealed class PrinterDiscoveryService
                 continue;
             }
 
-            if (machineProfiles.Any(machine =>
+            if (expectedModels.Count == 1 && machineProfiles.Any(machine =>
                 machine.Vendor.Equals("BBL", StringComparison.OrdinalIgnoreCase)
-                && machine.ModelName.Equals(expectedModel, StringComparison.OrdinalIgnoreCase)))
+                && machine.ModelName.Equals(expectedModels[0], StringComparison.OrdinalIgnoreCase)))
             {
-                resolved.Add(new ConfiguredModel("BBL", expectedModel, []));
+                resolved.Add(new ConfiguredModel("BBL", expectedModels[0], []));
                 resolvedDevices++;
+                continue;
             }
+
+            unresolvedDevices.Add(deviceId);
         }
 
-        return new RegisteredModelResolution(resolved, resolvedDevices);
+        var resolvedModelNames = resolved
+            .Select(model => model.ModelName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var unmatchedConfiguredModels = configuredModels
+            .Where(model => model.Vendor.Equals("BBL", StringComparison.OrdinalIgnoreCase)
+                && !resolvedModelNames.Contains(model.ModelName)
+                && machineProfiles.Any(machine => machine.Vendor.Equals(model.Vendor, StringComparison.OrdinalIgnoreCase)
+                    && machine.ModelName.Equals(model.ModelName, StringComparison.OrdinalIgnoreCase)))
+            .DistinctBy(model => model.Vendor + "|" + model.ModelName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var inferredDevices = 0;
+        if (unresolvedDevices.Count > 0 && unmatchedConfiguredModels.Count == unresolvedDevices.Count)
+        {
+            resolved.AddRange(unmatchedConfiguredModels.Select(model => model with { IsInferred = true }));
+            resolvedDevices += unresolvedDevices.Count;
+            inferredDevices = unresolvedDevices.Count;
+        }
+
+        return new RegisteredModelResolution(resolved, resolvedDevices, inferredDevices);
     }
 
     private static ConfiguredModel? ResolveP1Alternative(
@@ -320,7 +357,14 @@ public sealed class PrinterDiscoveryService
             ? parsed
             : decimal.MaxValue;
 
-    private sealed record ConfiguredModel(string Vendor, string ModelName, HashSet<string> Nozzles);
+    private sealed record ConfiguredModel(
+        string Vendor,
+        string ModelName,
+        HashSet<string> Nozzles,
+        bool IsInferred = false);
     private sealed record MachineProfile(string Vendor, string ModelName, string Nozzle, string PresetName);
-    private sealed record RegisteredModelResolution(List<ConfiguredModel> Models, int ResolvedDeviceCount);
+    private sealed record RegisteredModelResolution(
+        List<ConfiguredModel> Models,
+        int ResolvedDeviceCount,
+        int InferredDeviceCount);
 }

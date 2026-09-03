@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Windows;
@@ -39,7 +40,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionText = version is null ? "0.4.13" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
+        var versionText = version is null ? "0.4.14" : $"{version.Major}.{version.Minor}.{Math.Max(0, version.Build)}";
         BuildInfoText.Text = $"Version {versionText} | By Zataralee";
         Title = $"Bambu Filament Importer {versionText} by Zataralee";
         DarkModeCheck.IsChecked = ThemeService.IsDark;
@@ -393,6 +394,75 @@ public partial class MainWindow : Window
             AppUpdateNotice.Visibility == Visibility.Visible || LibraryUpdateNotice.Visibility == Visibility.Visible
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+    }
+
+    private void ReportBug_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var discovery = new PrinterDiscoveryService(_paths).Discover();
+            var systemCount = _currentFilaments.Count(profile => profile.StorageKind == FilamentStorageKind.SystemCatalog);
+            var userCount = _currentFilaments.Count(profile => profile.StorageKind == FilamentStorageKind.UserPreset);
+            var packageSummary = _package is null
+                ? "No package loaded"
+                : $"{_package.Manifest.DisplayName} {_package.Manifest.Version}";
+            var applicationContext =
+                $"Loaded package: {packageSummary}{Environment.NewLine}" +
+                $"Selected destination: {DestinationLabel(SelectedDestination())}{Environment.NewLine}" +
+                $"Current Device/AMS profiles: {systemCount}{Environment.NewLine}" +
+                $"Current Project Library profiles: {userCount}";
+            var dialog = new BugReportWindow(_paths, discovery, applicationContext) { Owner = this };
+            if (dialog.ShowDialog() != true || dialog.ReportResult is null)
+            {
+                return;
+            }
+
+            var report = dialog.ReportResult;
+            var copied = TryCopyReportToClipboard(report.IssueBody);
+            MessageBox.Show(
+                this,
+                copied
+                    ? "The sanitized diagnostic ZIP is ready and the report text has been copied to the clipboard. GitHub and the ZIP location will open next. Paste the report into the issue and drag the selected ZIP onto it."
+                    : "The sanitized diagnostic ZIP is ready. GitHub and the ZIP location will open next. The clipboard was unavailable, so open report.md inside the ZIP and paste it into the issue before attaching the ZIP.",
+                "Bug report ready",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            OpenReportDestination(report);
+            Log($"Created sanitized bug report package: {report.ZipPath}");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Bug report failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            Log(ex.ToString());
+        }
+    }
+
+    private static bool TryCopyReportToClipboard(string issueBody)
+    {
+        try
+        {
+            Clipboard.SetText(issueBody);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void OpenReportDestination(BugReportResult report)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = report.IssueUrl,
+            UseShellExecute = true
+        });
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = $"/select,\"{report.ZipPath}\"",
+            UseShellExecute = true
+        });
     }
 
     private void RefreshLibrary_Click(object sender, RoutedEventArgs e)
@@ -1342,7 +1412,8 @@ public partial class MainWindow : Window
         var discovery = new PrinterDiscoveryService(_paths).Discover();
         foreach (var target in discovery.Printers)
         {
-            target.IsSelected = firstLoad || selectedKeys.Contains(target.Vendor + "|" + target.ModelName);
+            target.IsSelected = selectedKeys.Contains(target.Vendor + "|" + target.ModelName)
+                || (firstLoad && !target.IsInferred);
             _printerTargets.Add(target);
         }
 
@@ -1468,5 +1539,6 @@ public partial class MainWindow : Window
     {
         LogBox.AppendText($"[{DateTime.Now:T}] {message}{Environment.NewLine}");
         LogBox.ScrollToEnd();
+        AppLog.Write(message);
     }
 }

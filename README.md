@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.13 | By Zataralee**
+**Version 0.4.14 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -45,7 +45,8 @@ Official source references and catalog policy are documented in [catalogs/README
 ## Features
 
 - Imports printer-neutral manufacturer libraries to selected Bambu Studio printer models.
-- Reads locally registered printer models from Bambu Studio and excludes unrelated enabled presets when device records are available.
+- Reads locally registered printer models from Bambu Studio and excludes unrelated enabled presets when device records are available; future-model inferences are labeled and left unchecked for review.
+- Recognizes H2C, H2D, H2D Pro, and H2S devices, including shared H-series identifiers resolved against locally enabled machine presets.
 - Compares actual `compatible_printers` coverage and generates only missing profiles.
 - Handles Bambu's P1S/P1P live-device identity crossover so P1-family profiles remain visible in the AMS material picker.
 - Imports to the Device/AMS catalog, Project Library, or both.
@@ -66,9 +67,12 @@ Official source references and catalog policy are documented in [catalogs/README
 - Checks and installs manufacturer library updates independently from application updates, with package hashes and rollback protection.
 - Keeps one managed manufacturer library folder in Local AppData so portable BFI copies do not create competing catalogs in Downloads or other launch folders.
 - Checks GitHub Releases and installs confirmed updates in place.
+- Keeps 14 days of local BFI activity and error logs and creates a sanitized diagnostic ZIP from the Report Bug dialog.
 - Supports persistent light and dark modes.
 
-BFI does not connect to Bambu printers or Bambu Cloud and does not read account credentials or access-code values. Local device identifiers are used only to identify printer models and are never displayed, logged, or transmitted. At startup, BFI checks this repository for the latest application release and manufacturer-library index. Package files are downloaded only after the user selects libraries and confirms the download.
+BFI does not connect to Bambu printers or Bambu Cloud. Local Bambu Studio device identifiers are read only to identify printer models and redact diagnostics; they are never displayed, logged, included in reports, or transmitted. At startup, BFI checks this repository for the latest application release and manufacturer-library index. Package files are downloaded only after the user selects libraries and confirms the download.
+
+The **Report Bug** action creates a local ZIP containing the user's report, a version and printer-model summary, and optional sanitized BFI logs. Bambu Studio configuration files are never included. Known usernames, local user paths, IP addresses, printer serial numbers, and access codes are removed. BFI then opens GitHub and selects the ZIP in Explorer, but the user must review and attach it; nothing is uploaded automatically. Local BFI logs are retained for 14 days under `%LOCALAPPDATA%\BambuFilamentImporter\Logs`.
 
 ![Bambu Filament Importer dark mode](docs/images/main-window-dark.png)
 
@@ -81,6 +85,8 @@ BFI does not connect to Bambu printers or Bambu Cloud and does not read account 
 5. Open the **Import Package** tab and select **Import Filament Package**.
 6. Choose a `.bflib` file from the managed `Manufacturer Libraries` folder opened by BFI.
 7. Select the destination and target printer models, review duplicates, and install.
+
+Use **Report Bug** in the header to create a sanitized diagnostic package when reporting a problem. Paste the copied report into the GitHub page and drag the selected ZIP onto the issue.
 
 Program Files mirroring requires Administrator access. Normal roaming-catalog and Project Library imports do not.
 

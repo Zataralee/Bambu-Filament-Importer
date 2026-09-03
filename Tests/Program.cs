@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -325,6 +326,127 @@ try
     var fallbackDiscovery = new PrinterDiscoveryService(new BambuPaths(discoveryRoaming, discoveryProgram)).Discover();
     Check(!fallbackDiscovery.UsesRegisteredDevices && fallbackDiscovery.Printers.Count == 2, "enabled preset fallback remains available");
 
+    var hSeriesRoaming = Path.Combine(sandbox, "HSeriesDiscoveryBambuStudio");
+    var hSeriesMachineFolder = Path.Combine(hSeriesRoaming, "system", "BBL", "machine");
+    Directory.CreateDirectory(hSeriesMachineFolder);
+    foreach (var model in new[] { "Bambu Lab A1", "Bambu Lab P1S", "Bambu Lab X1 Carbon", "Bambu Lab H2C", "Bambu Lab H2D", "Bambu Lab H2D Pro", "Bambu Lab H2S" })
+    {
+        File.WriteAllText(Path.Combine(hSeriesMachineFolder, model + ".json"),
+            new JsonObject
+            {
+                ["type"] = "machine",
+                ["instantiation"] = "true",
+                ["name"] = model + " 0.4 nozzle",
+                ["printer_model"] = model,
+                ["printer_variant"] = "0.4"
+            }.ToJsonString());
+    }
+
+    var redditH2cConfig = new JsonObject
+    {
+        ["access_code"] = new JsonObject
+        {
+            ["01P000000000001"] = "redacted-test-code",
+            ["039000000000001"] = "redacted-test-code",
+            ["31B000000000001"] = "redacted-test-code"
+        },
+        ["models"] = new JsonArray
+        {
+            new JsonObject { ["vendor"] = "BBL", ["model"] = "Bambu Lab P1S", ["nozzle_diameter"] = "0.4" },
+            new JsonObject { ["vendor"] = "BBL", ["model"] = "Bambu Lab A1", ["nozzle_diameter"] = "0.4" },
+            new JsonObject { ["vendor"] = "BBL", ["model"] = "Bambu Lab H2C", ["nozzle_diameter"] = "0.4" },
+            new JsonObject { ["vendor"] = "BBL", ["model"] = "Bambu Lab X1 Carbon", ["nozzle_diameter"] = "0.4" }
+        }
+    };
+    File.WriteAllText(Path.Combine(hSeriesRoaming, "BambuStudio.conf"), redditH2cConfig.ToJsonString());
+    var redditH2cDiscovery = new PrinterDiscoveryService(new BambuPaths(hSeriesRoaming, discoveryProgram)).Discover();
+    Check(redditH2cDiscovery.Printers.Select(printer => printer.ModelName).ToHashSet(StringComparer.OrdinalIgnoreCase)
+        .SetEquals(["Bambu Lab P1S", "Bambu Lab A1", "Bambu Lab H2C"]),
+        "Reddit P1S A1 H2C discovery excludes stale presets");
+
+    foreach (var hSeriesCase in new[]
+    {
+        (Serial: "094000000000001", Model: "Bambu Lab H2C"),
+        (Serial: "094000000000001", Model: "Bambu Lab H2D"),
+        (Serial: "239000000000001", Model: "Bambu Lab H2D Pro"),
+        (Serial: "093000000000001", Model: "Bambu Lab H2S")
+    })
+    {
+        var config = new JsonObject
+        {
+            ["access_code"] = new JsonObject { [hSeriesCase.Serial] = "redacted-test-code" },
+            ["models"] = new JsonArray
+            {
+                new JsonObject { ["vendor"] = "BBL", ["model"] = hSeriesCase.Model, ["nozzle_diameter"] = "0.4" }
+            }
+        };
+        File.WriteAllText(Path.Combine(hSeriesRoaming, "BambuStudio.conf"), config.ToJsonString());
+        var result = new PrinterDiscoveryService(new BambuPaths(hSeriesRoaming, discoveryProgram)).Discover();
+        Check(result.Printers.Count == 1 && result.Printers[0].ModelName == hSeriesCase.Model,
+            hSeriesCase.Model + " discovery");
+    }
+
+    var futurePrinterConfig = new JsonObject
+    {
+        ["access_code"] = new JsonObject { ["ZZZ000000000001"] = "redacted-test-code" },
+        ["models"] = new JsonArray
+        {
+            new JsonObject { ["vendor"] = "BBL", ["model"] = "Bambu Lab H2C", ["nozzle_diameter"] = "0.4" }
+        }
+    };
+    File.WriteAllText(Path.Combine(hSeriesRoaming, "BambuStudio.conf"), futurePrinterConfig.ToJsonString());
+    var futurePrinterDiscovery = new PrinterDiscoveryService(new BambuPaths(hSeriesRoaming, discoveryProgram)).Discover();
+    Check(futurePrinterDiscovery.Printers.Count == 1
+        && futurePrinterDiscovery.Printers[0].ModelName == "Bambu Lab H2C"
+        && futurePrinterDiscovery.Printers[0].IsInferred
+        && !futurePrinterDiscovery.Printers[0].IsSelected
+        && futurePrinterDiscovery.Status.Contains("enabled local machine presets", StringComparison.OrdinalIgnoreCase),
+        "unknown device guarded preset inference");
+
+    var diagnosticLogFolder = Path.Combine(sandbox, "DiagnosticLogs");
+    Directory.CreateDirectory(diagnosticLogFolder);
+    File.WriteAllText(Path.Combine(diagnosticLogFolder, "bfi-test.log"),
+        "Failed at C:\\Users\\PrivateUser\\Downloads\\sample.bflib on 192.168.1.42 " +
+        "for ZZZ000000000001 access_code=redacted-test-code token=private-token");
+    var diagnosticDiscovery = new PrinterDiscoveryService(new BambuPaths(hSeriesRoaming, discoveryProgram)).Discover();
+    var diagnosticReport = new DiagnosticReportService(
+        new BambuPaths(hSeriesRoaming, discoveryProgram),
+        diagnosticLogFolder).Create(
+            new BugReportRequest(
+                "H2C profile missing",
+                "Open the importer",
+                "H2C should be listed",
+                "Path C:\\Users\\PrivateUser\\Downloads and 192.168.1.42 were shown",
+                IncludeLogs: true,
+                ApplicationContext: "Loaded package: Test"),
+            diagnosticDiscovery,
+            Path.Combine(sandbox, "DiagnosticReports"));
+    using (var reportArchive = ZipFile.OpenRead(diagnosticReport.ZipPath))
+    {
+        Check(reportArchive.Entries.Any(entry => entry.FullName == "diagnostics.txt")
+            && reportArchive.Entries.Any(entry => entry.FullName == "report.md")
+            && reportArchive.Entries.Any(entry => entry.FullName.StartsWith("logs/", StringComparison.Ordinal)),
+            "diagnostic report package contents");
+        var reportContents = string.Join(Environment.NewLine, reportArchive.Entries
+            .Where(entry => !string.IsNullOrEmpty(entry.Name))
+            .Select(entry =>
+            {
+                using var reader = new StreamReader(entry.Open());
+                return reader.ReadToEnd();
+            }));
+        Check(!reportContents.Contains("PrivateUser", StringComparison.OrdinalIgnoreCase)
+            && !reportContents.Contains("192.168.1.42", StringComparison.OrdinalIgnoreCase)
+            && !reportContents.Contains("ZZZ000000000001", StringComparison.OrdinalIgnoreCase)
+            && !reportContents.Contains("redacted-test-code", StringComparison.OrdinalIgnoreCase)
+            && !reportContents.Contains("private-token", StringComparison.OrdinalIgnoreCase),
+            "diagnostic report redacts private data");
+        Check(reportContents.Contains("Bambu Lab H2C", StringComparison.OrdinalIgnoreCase),
+            "diagnostic report retains printer model");
+    }
+    Check(diagnosticReport.IssueUrl.Contains("template=bfi-diagnostic-report.md", StringComparison.Ordinal)
+        && diagnosticReport.IssueBody.Contains("H2C profile missing", StringComparison.Ordinal),
+        "diagnostic GitHub issue handoff");
+
     var processProbePath = Path.Combine(sandbox, "bambu-studio.exe");
     File.Copy(Path.Combine(Environment.SystemDirectory, "ping.exe"), processProbePath);
     using (var processProbe = Process.Start(new ProcessStartInfo
@@ -592,6 +714,7 @@ try
         var darkScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow-Dark.png");
         var startupNoticeScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "MainWindow-Startup-Notice.png");
         var catalogScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "LibraryCatalogWindow.png");
+        var bugReportScreenshotPath = Path.Combine(projectRoot, "Tests", "artifacts", "BugReportWindow.png");
         var catalogPreview = new ManufacturerLibraryCatalog(
             manufacturerIndex.CatalogVersion,
             ManufacturerLibraryStore.ManagedDirectory,
@@ -611,6 +734,7 @@ try
             darkScreenshotPath,
             startupNoticeScreenshotPath,
             catalogScreenshotPath,
+            bugReportScreenshotPath,
             catalogPreview);
         Check(File.Exists(screenshotPath) && new FileInfo(screenshotPath).Length > 50_000, "main window render");
         Check(File.Exists(libraryScreenshotPath) && new FileInfo(libraryScreenshotPath).Length > 50_000, "settings window render");
@@ -619,6 +743,8 @@ try
             "startup update notification render");
         Check(File.Exists(catalogScreenshotPath) && new FileInfo(catalogScreenshotPath).Length > 25_000,
             "selectable library catalog render");
+        Check(File.Exists(bugReportScreenshotPath) && new FileInfo(bugReportScreenshotPath).Length > 25_000,
+            "bug report window render");
     }
 
     Console.WriteLine("All smoke tests passed.");
@@ -639,6 +765,7 @@ static void RenderWindow(
     string darkScreenshotPath,
     string startupNoticeScreenshotPath,
     string catalogScreenshotPath,
+    string bugReportScreenshotPath,
     ManufacturerLibraryCatalog catalogPreview)
 {
     Exception? renderError = null;
@@ -723,6 +850,22 @@ static void RenderWindow(
             catalogWindow.UpdateLayout();
             SaveWindow(catalogWindow, catalogScreenshotPath);
             catalogWindow.Close();
+
+            var reportWindow = new BugReportWindow(
+                new BambuPaths(),
+                new PrinterDiscoveryService(new BambuPaths()).Discover(),
+                "Loaded package: SUNLU Complete Filament Library")
+            {
+                Owner = window,
+                Left = -19000,
+                Top = -19000,
+                ShowInTaskbar = false,
+                WindowStartupLocation = System.Windows.WindowStartupLocation.Manual
+            };
+            reportWindow.Show();
+            reportWindow.UpdateLayout();
+            SaveWindow(reportWindow, bugReportScreenshotPath);
+            reportWindow.Close();
 
             tabs.SelectedIndex = 0;
             ThemeService.Apply(true);

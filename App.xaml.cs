@@ -1,4 +1,3 @@
-using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using BambuFilamentImporter.Services;
@@ -31,24 +30,11 @@ public partial class App : Application
 
     private void Application_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        try
-        {
-            var logFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "BambuFilamentImporter");
-            Directory.CreateDirectory(logFolder);
-            File.AppendAllText(
-                Path.Combine(logFolder, "error.log"),
-                $"[{DateTime.Now:O}]{Environment.NewLine}{e.Exception}{Environment.NewLine}{Environment.NewLine}");
-        }
-        catch
-        {
-            // The error dialog is still useful if Windows also blocks the fallback log.
-        }
+        AppLog.WriteException("Unhandled UI exception.", e.Exception);
 
         MessageBox.Show(
             e.Exception.Message + Environment.NewLine + Environment.NewLine +
-            "The error was recorded and the importer will remain open.",
+            "The error was recorded. Use Report Bug to create a sanitized diagnostic package. The importer will remain open.",
             "Bambu Filament Importer error",
             MessageBoxButton.OK,
             MessageBoxImage.Error);

@@ -7,6 +7,20 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        AppLog.Initialize();
+        AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+        {
+            if (eventArgs.ExceptionObject is Exception exception)
+            {
+                AppLog.WriteException("Unhandled application exception.", exception);
+            }
+        };
+        TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
+        {
+            AppLog.WriteException("Unobserved background task exception.", eventArgs.Exception);
+            eventArgs.SetObserved();
+        };
+
         if (args.Length == 4 && args[0].Equals("--apply-update", StringComparison.OrdinalIgnoreCase))
         {
             try

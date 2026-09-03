@@ -1,0 +1,56 @@
+<Window x:Class="BambuFilamentImporter.BugReportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Report a Bug" Icon="BFI Icon.ico" Width="720" Height="720" MinWidth="620" MinHeight="620"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="Report a Bug" FontSize="23" FontWeight="SemiBold"/>
+            <TextBlock Text="Describe the problem and BFI will prepare a sanitized report for GitHub. Nothing is uploaded automatically."
+                       TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,18,0,16">
+            <StackPanel>
+                <TextBlock Text="Summary" FontWeight="SemiBold"/>
+                <TextBox x:Name="SummaryText" MaxLength="120" Margin="0,5,0,14"/>
+
+                <TextBlock Text="Steps to reproduce" FontWeight="SemiBold"/>
+                <TextBox x:Name="StepsText" Height="100" MaxLength="10000" AcceptsReturn="True" TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" Margin="0,5,0,14"/>
+
+                <TextBlock Text="Expected behavior" FontWeight="SemiBold"/>
+                <TextBox x:Name="ExpectedText" Height="70" MaxLength="10000" AcceptsReturn="True" TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" Margin="0,5,0,14"/>
+
+                <TextBlock Text="Actual behavior or error text" FontWeight="SemiBold"/>
+                <TextBox x:Name="ActualText" Height="100" MaxLength="10000" AcceptsReturn="True" TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" Margin="0,5,0,14"/>
+
+                <CheckBox x:Name="IncludeLogsCheck" IsChecked="True" Content="Include sanitized BFI logs" Margin="0,0,0,12"/>
+
+                <Border Background="{DynamicResource WarningBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1" CornerRadius="6" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="Privacy" FontWeight="SemiBold"/>
+                        <TextBlock Text="The package contains BFI logs and a diagnostic summary only. Bambu Studio configuration files are not included. Known usernames, local user paths, IP addresses, printer serial numbers, and access codes are removed. Review the ZIP before attaching it if your report contains information you consider private."
+                                   TextWrapping="Wrap" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock x:Name="PrinterSummaryText" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,13,0,0"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" Click="Cancel_Click" MinWidth="90" Padding="13,8" Margin="0,0,8,0"/>
+            <Button x:Name="CreateReportButton" Content="Create Report" Click="CreateReport_Click" MinWidth="125" Padding="13,8" Margin="0"/>
+        </StackPanel>
+    </Grid>
+</Window>

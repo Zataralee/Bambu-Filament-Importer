@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.14 - 2026-09-02
+
+- Added H2C discovery and corrected shared H-series identifier handling for H2C, H2D, H2D Pro, and H2S.
+- Added guarded discovery for one-to-one matches between otherwise unknown registered devices and enabled Bambu machine presets; inferred targets are labeled and left unchecked for review.
+- Added persistent 14-day activity and error logs plus global UI and background exception capture.
+- Added a native Report Bug dialog that creates a sanitized diagnostics ZIP, copies a ready-to-paste report, opens GitHub, and selects the ZIP for attachment.
+- Redacts usernames, local user paths, IP addresses, printer serial numbers, access codes, and common secret fields without including Bambu Studio configuration files.
+- Added regression coverage for the reported P1S, A1, and H2C setup, every current H-series model, diagnostic contents, privacy redaction, and the report window.
+
 ## 0.4.13 - 2026-08-30
 
 - Replaced UI-thread-only Bambu Studio polling with a resilient background process monitor.
