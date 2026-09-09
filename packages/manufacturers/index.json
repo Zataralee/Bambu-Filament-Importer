@@ -1,161 +1,195 @@
 {
   "format": "bfi-manufacturer-library-index",
   "formatVersion": 1,
-  "catalogVersion": "2026.08.29.3",
-  "generatedUtc": "2026-08-30T03:34:52.2390330Z",
+  "catalogVersion": "2026.09.09.1",
+  "generatedUtc": "2026-09-09T18:40:30.7781640Z",
   "packages": [
     {
       "fileName": "Atomic-Filament.bflib",
       "packageId": "atomic-filament-neutral-2026-08",
       "displayName": "Atomic Filament Library",
       "manufacturer": "Atomic Filament",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 11,
-      "sha256": "4A15BE3948F4C72C383B9555EB7A0E4F584F673C0D8FC6A072412531BF3011C2"
+      "sha256": "A32B4D77649F436068165CF4FC6B46774623C361240063A358FB8883915E8C1D"
     },
     {
       "fileName": "colorFabb.bflib",
       "packageId": "colorfabb-neutral-2026-08",
       "displayName": "colorFabb Filament Library",
       "manufacturer": "colorFabb",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 29,
-      "sha256": "04C859387A807B465C74A54505064FF0577209897164B527F972949ACF1A52E1"
+      "sha256": "A6B8DB282B1EAB71CC4F0D18B7BD0510845220617B5C44C93E16EABDA7A02BBC"
     },
     {
       "fileName": "Creality.bflib",
       "packageId": "creality-neutral-2026-08",
       "displayName": "Creality Filament Library",
       "manufacturer": "Creality",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 22,
-      "sha256": "318FD06C8846EA986EE18C74B3A52AF2FA060580234E01BA6E0D486C20E4701E"
+      "sha256": "8BF4AD71E076FC85791E0FEA81A24DB24A21F4785F8BDDFA5BB2C13FE4C93B57"
     },
     {
       "fileName": "ELEGOO.bflib",
       "packageId": "elegoo-neutral-2026-08",
       "displayName": "ELEGOO Filament Library",
       "manufacturer": "ELEGOO",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 32,
-      "sha256": "961FEBC51074023BBB923AB0F46A8B2123A3715D822EEEBBF34C626D8FFCCFB9"
+      "sha256": "57FD578F2861A681057FA1B75959E86FDD1FCEDE8DE3C0DFE6F53BC75F97C768"
     },
     {
       "fileName": "eSUN.bflib",
       "packageId": "esun-x1c-p1s-2026-08",
       "displayName": "eSUN Complete Filament Library",
       "manufacturer": "eSUN",
-      "version": "2026.08.29.2",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 36,
-      "sha256": "064EC0EDDB05EF47E0145030BD737B0B82AF24F6CB705C6AF4B2C9301058EE08"
+      "sha256": "A4B55AFD9E64E9CEF98C006DCED432421722ECFF7F934EC4C9D7B01BF6301DFF"
     },
     {
       "fileName": "Fiberlogy.bflib",
       "packageId": "fiberlogy-x1c-p1s-2026-08",
       "displayName": "Fiberlogy Filament Library",
       "manufacturer": "Fiberlogy",
-      "version": "2026.08.29.2",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 25,
-      "sha256": "B1E4AAFDD471E550E073875C3FA7058EAFE8ADCD0766CA805587EB778CD06093"
+      "sha256": "2A9AE896FD3B99612A05239D0D08B466CA4830C93BF1677CC8BB33A8F6FED00A"
     },
     {
       "fileName": "Fillamentum.bflib",
       "packageId": "fillamentum-x1c-p1s-2026-08",
       "displayName": "Fillamentum Filament Library",
       "manufacturer": "Fillamentum",
-      "version": "2026.08.29.2",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 20,
-      "sha256": "04A323BDC5F6A4694AD62E10AD87054CBFBE74E7D3F6261EF31C5ECD89905C35"
+      "sha256": "9FE6EF5D7B3B37E012CE680366C2882D6D4906C07022C9E18F6A6ABBE3F357DF"
     },
     {
       "fileName": "HATCHBOX.bflib",
       "packageId": "hatchbox-neutral-2026-08",
       "displayName": "HATCHBOX Filament Library",
       "manufacturer": "HATCHBOX",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 8,
-      "sha256": "873C81C878E40BB7AF8F2742AC48D1601B1E84CD213D393F0AB4BD2D56416BA8"
+      "sha256": "C1758B37E5231E42065FD968A704A538D79256E2498362548245BCE52829D8CA"
     },
     {
       "fileName": "MatterHackers.bflib",
       "packageId": "matterhackers-x1c-p1s-2026-08",
       "displayName": "MatterHackers Filament Library",
       "manufacturer": "MatterHackers",
-      "version": "2026.08.29.2",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 16,
-      "sha256": "5B1123A569CE087F57E0DF83C7B2E4BFD2CD5EF6BAABE9829CAA1FAD0F74BCE2"
+      "sha256": "B2476C0CA7A388F8C22EEF9BDF810BCFFCBBE3E5A8F7D38C2FAB22812CEA7D0C"
     },
     {
       "fileName": "Overture.bflib",
       "packageId": "overture-x1c-p1s-2026-08",
       "displayName": "Overture Complete Filament Library",
       "manufacturer": "Overture",
-      "version": "2026.08.29.2",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 14,
-      "sha256": "7C81AB7101BA982074578B7D918086E3DFF7F1CA63704568289156A522C81213"
+      "sha256": "431B1B5ADFF2182A8469F8643E2708197E2FB7ADA0AB4DDC985249CEA1E5BFE5"
     },
     {
       "fileName": "Polymaker.bflib",
       "packageId": "polymaker-x1c-p1s-2026-08",
       "displayName": "Polymaker Complete Filament Library",
       "manufacturer": "Polymaker",
-      "version": "2026.08.29.2",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 48,
-      "sha256": "C85B4D13565560BC255679CE45B2E3824A353CEE2108D585B49882688D1BD4CA"
+      "sha256": "C12D3AAF59BEEC1E22BD8E67C42B95DF3C01ED0243A3ADFFC2D90922DF2822E2"
     },
     {
       "fileName": "Proto-pasta.bflib",
       "packageId": "proto-pasta-neutral-2026-08",
       "displayName": "Proto-pasta Filament Library",
       "manufacturer": "Proto-pasta",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 27,
-      "sha256": "0DF0C7D9EA451DEA15CAA43B5BE9280287B50CA04B2159056ACB1757B7B0DE14"
+      "sha256": "42D34BEE2A92AFEE49DA767A4E9CA5221A9F17F28F9164790136048905A8948F"
     },
     {
       "fileName": "Prusament.bflib",
       "packageId": "prusament-x1c-p1s-2026-08",
       "displayName": "Prusament Filament Library",
       "manufacturer": "Prusament",
-      "version": "2026.08.29.3",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 22,
-      "sha256": "5E42072060D6E6521A88A75058B2DC1CB5BB7EDAD3B2AFFB2405A4CE3B9C7D24"
+      "sha256": "E5E8F60065BE16F2BAF9F12A3A199485BE76FAA47315CC521D0CE09790AC4C25"
     },
     {
       "fileName": "Siraya-Tech.bflib",
       "packageId": "siraya-tech-neutral-2026-08",
       "displayName": "Siraya Tech Filament Library",
       "manufacturer": "Siraya Tech",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 23,
-      "sha256": "DD74D0F40D20952D0F45D38EF98455D2D8A976D3C12617037F36DFC9EF25C5F5"
+      "sha256": "BD153CFF0A2D12AC785F86B4334655E30CC33CC4BEDA11745ED2FCFCFFA6F2CE"
     },
     {
       "fileName": "Spectrum-Filaments.bflib",
       "packageId": "spectrum-x1c-p1s-2026-08",
       "displayName": "Spectrum Filaments Library",
       "manufacturer": "Spectrum",
-      "version": "2026.08.29.2",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 22,
-      "sha256": "F2715F56D85782D320C54CEA6E15DBB55A8B92CB65398D97674D018D5BBA6B86"
+      "sha256": "4A869E5F1EC2EF972B31D02EF9845DA917B01A1FBB5EDC848D692F3B7F72AB71"
     },
     {
       "fileName": "SUNLU.bflib",
       "packageId": "sunlu-neutral-2026-08",
       "displayName": "SUNLU Complete Filament Library",
       "manufacturer": "SUNLU",
-      "version": "2026.08.29.2",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 40,
-      "sha256": "C04A299033D497D96AAA69204FC28542359AA409DFEE35FD6C6CFBD3F4CBCBF4"
+      "sha256": "B863BC09EC82559F5F89D0B9FB66AEFCFBA70F2BD3F2CB35393F167CBF2EF0C0"
     },
     {
       "fileName": "TINMORRY.bflib",
       "packageId": "tinmorry-neutral-2026-08",
       "displayName": "TINMORRY Filament Library",
       "manufacturer": "TINMORRY",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "profileCount": 28,
-      "sha256": "45DCD45BD37E94EFBC8E68DB28FF5ED397FDB6E3AF10F847BA242476133D74EA"
+      "sha256": "1273ADF2D061C4AF808A17AA387A4C71EF64A1FD4695AF11A5F3389DA88325F3"
     }
   ]
 }

@@ -47,7 +47,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path './release/bundle' -Force | Out-Null
           Copy-Item './release/app/BambuFilamentImporter.exe' './release/bundle/'
-          Copy-Item './README.md','./LICENSE','./LICENSE_HISTORY.md','./THIRD_PARTY_NOTICES.md','./CHANGELOG.md' './release/bundle/'
+          Copy-Item './README.md','./LICENSE','./LIBRARY_LICENSE.md','./LICENSE_HISTORY.md','./THIRD_PARTY_NOTICES.md','./CHANGELOG.md' './release/bundle/'
           Compress-Archive -Path './release/bundle/*' -DestinationPath "./release/Bambu-Filament-Importer-$env:GITHUB_REF_NAME-win-x64.zip"
 
       - name: Create GitHub release
@@ -58,6 +58,7 @@ jobs:
           gh release create "$env:GITHUB_REF_NAME" `
             './release/app/BambuFilamentImporter.exe' `
             './LICENSE' `
+            './LIBRARY_LICENSE.md' `
             './LICENSE_HISTORY.md' `
             './THIRD_PARTY_NOTICES.md' `
             "./release/Bambu-Filament-Importer-$env:GITHUB_REF_NAME-win-x64.zip" `

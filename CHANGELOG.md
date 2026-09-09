@@ -2,7 +2,8 @@
 
 ## 0.5.0 - Unreleased
 
-- Changed future BFI revisions from MIT to the BFI Limited Use License 1.0, permitting ordinary use of official builds while reserving modification, resale, and redistribution rights.
+- Changed future BFI application revisions from MIT to the BFI Limited Use License 1.1, permitting ordinary use of official builds while reserving modification, resale, and redistribution rights.
+- Dedicated BFI-authored filament library data and the documented `.bflib` package format to public use under CC0 1.0 Universal, including modification, redistribution, and commercial use.
 - Added an explicit license history and third-party provenance notice. Versions v0.4.15 and earlier retain their original MIT license.
 
 ## 0.4.15 - 2026-09-02

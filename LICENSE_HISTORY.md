@@ -3,10 +3,15 @@
 ## Version 0.5.0 and later
 
 BFI version `v0.5.0` and later revisions and releases that include the
-**BFI Limited Use License 1.0**
+**BFI Limited Use License 1.1**
 are proprietary, source-visible software. That license permits ordinary use of
 unmodified official builds but does not permit modification, resale, sublicensing,
 hosting, or redistribution without Zataralee's prior written permission.
+
+BFI-authored filament library data and the documented `.bflib` package format are
+separate from the restricted application. They are dedicated for public use under
+[CC0 1.0 Universal](LIBRARY_LICENSE.md), including modification, redistribution,
+and commercial use.
 
 ## Earlier releases
 

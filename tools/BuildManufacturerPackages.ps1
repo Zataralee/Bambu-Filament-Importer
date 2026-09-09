@@ -6,6 +6,11 @@ param(
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $usedFilamentIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+$libraryLicenseSource = Join-Path (Split-Path -Parent $PSScriptRoot) 'LIBRARY_LICENSE.md'
+
+if (-not (Test-Path -LiteralPath $libraryLicenseSource)) {
+    throw "Library license was not found: $libraryLicenseSource"
+}
 
 function Get-DisplaySafeName([string]$Name, [string]$Vendor) {
     if ($Name.Equals($Vendor, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -197,12 +202,16 @@ foreach ($manufacturer in $catalog.manufacturers) {
             version = if ([string]::IsNullOrWhiteSpace([string]$manufacturer.version)) { [string]$catalog.version } else { [string]$manufacturer.version }
             createdUtc = (Get-Date).ToUniversalTime().ToString('o')
             printerNeutral = $true
+            license = 'CC0-1.0'
+            licenseUrl = 'https://creativecommons.org/publicdomain/zero/1.0/'
+            licenseScope = 'BFI-authored filament library data and package metadata only. Third-party trademarks, source material, profiles, and G-code retain their respective rights.'
             compatibilityNote = 'Printer-neutral manufacturer definitions. The importer discovers configured printer models and nozzle sizes from Bambu Studio, then creates compatible per-printer presets during installation. Manufacturer recommendations are starting points; calibrate flow ratio and maximum volumetric speed for each spool and nozzle.'
             sourceUrls = @($manufacturer.sourceUrls)
             profiles = $profiles
             projectPresetNames = $projectPresetNames
         }
         Write-JsonFile (Join-Path $packageRoot 'manifest.json') $manifest
+        Copy-Item -LiteralPath $libraryLicenseSource -Destination (Join-Path $packageRoot 'LIBRARY_LICENSE.md')
 
         $outputPath = Join-Path $OutputFolder ([string]$manufacturer.outputFile)
         if (Test-Path -LiteralPath $outputPath) {
@@ -340,6 +349,9 @@ if (Test-Path -LiteralPath $sunluSource) {
             version = [string]$catalog.version
             createdUtc = (Get-Date).ToUniversalTime().ToString('o')
             printerNeutral = $true
+            license = 'CC0-1.0'
+            licenseUrl = 'https://creativecommons.org/publicdomain/zero/1.0/'
+            licenseScope = 'BFI-authored filament library data and package metadata only. Third-party trademarks, source material, profiles, and G-code retain their respective rights.'
             compatibilityNote = 'Printer-neutral SUNLU definitions grouped by material family. The importer discovers configured printer models and nozzle sizes from Bambu Studio, then creates compatible per-printer presets during installation.'
             sourceUrls = @(
                 'https://www.sunlu.com/collections/1?name=Filaments',
@@ -350,6 +362,7 @@ if (Test-Path -LiteralPath $sunluSource) {
             projectPresetNames = @()
         }
         Write-JsonFile (Join-Path $packageRoot 'manifest.json') $neutralManifest
+        Copy-Item -LiteralPath $libraryLicenseSource -Destination (Join-Path $packageRoot 'LIBRARY_LICENSE.md')
 
         $outputPath = Join-Path $OutputFolder 'SUNLU.bflib'
         if (Test-Path -LiteralPath $outputPath) {
@@ -394,6 +407,8 @@ $libraryIndexPackages = @(
                 displayName = [string]$packageManifest.displayName
                 manufacturer = [string]$packageManifest.manufacturer
                 version = [string]$packageManifest.version
+                license = [string]$packageManifest.license
+                licenseUrl = [string]$packageManifest.licenseUrl
                 profileCount = @($packageManifest.profiles).Count
                 sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
             }

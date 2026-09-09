@@ -101,10 +101,16 @@ Back up the library before extensive changes. The application can create a compl
 A `.bflib` file is a ZIP archive containing:
 
 - `manifest.json`
+- `LIBRARY_LICENSE.md`
 - printer-neutral manufacturer filament JSON files listed by the manifest
 - official source URLs and package compatibility notes in the manifest
 
 The package does not contain hard-coded printer names. The importer creates compatible child profiles only for printer models selected at installation time.
+
+The `.bflib` format and BFI-authored filament library data are dedicated to public
+use under [CC0 1.0 Universal](LIBRARY_LICENSE.md). Anyone may create, modify,
+redistribute, or sell compatible library packages. Filament manufacturers are
+especially encouraged to publish and maintain packages for their own materials.
 
 AMS filament IDs are limited to eight characters and must be unique. The importer normalizes package IDs during installation and can repair older installed libraries from the **Current Bambu Library** tab.
 
@@ -139,9 +145,14 @@ Bambu Filament Importer is created by **Zataralee**. It is not affiliated with o
 ## License
 
 Current development revisions are provided under the proprietary
-[BFI Limited Use License 1.0](LICENSE). You may install and use unmodified official
+[BFI Limited Use License 1.1](LICENSE). You may install and use unmodified official
 builds, including for internal business use, but modification, resale, sublicensing,
 hosting, and redistribution require Zataralee's prior written permission.
+
+That restriction applies to the importer application, not the filament libraries.
+BFI-authored library data and the `.bflib` format are available under
+[CC0 1.0 Universal](LIBRARY_LICENSE.md) for unrestricted public reuse, modification,
+redistribution, and commercial use.
 
 Versions `v0.4.15` and earlier remain under the MIT License that accompanied those
 releases. GitHub's terms permit viewing and on-platform forking while this repository

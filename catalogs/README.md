@@ -24,6 +24,12 @@ This release contains 423 filament product families from 17 manufacturers. Each 
 
 ## Data Policy
 
+BFI-authored catalog data, generated package metadata, and the documented `.bflib`
+format are dedicated under [CC0 1.0 Universal](../LIBRARY_LICENSE.md). They may be
+used, modified, redistributed, and sold without permission. This does not grant
+rights in manufacturer trademarks, source documents, Bambu Studio content, or any
+other third-party material.
+
 - Temperatures, cooling, drying values, and enclosure or hardened-nozzle guidance come from official manufacturer product pages, technical sheets, or printing guides.
 - Flow ratio and maximum volumetric speed are conservative starting values because manufacturers generally do not publish Bambu-specific calibration values for every product.
 - Every setting remains editable in the importer after installation.

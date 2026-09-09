@@ -13,6 +13,9 @@ public sealed class FilamentPackage
     public string Version { get; set; } = "";
     public string CreatedUtc { get; set; } = "";
     public bool PrinterNeutral { get; set; }
+    public string License { get; set; } = "";
+    public string LicenseUrl { get; set; } = "";
+    public string LicenseScope { get; set; } = "";
     public string CompatibilityNote { get; set; } = "";
     public List<string> SourceUrls { get; set; } = [];
     public List<FilamentProfileEntry> Profiles { get; set; } = [];

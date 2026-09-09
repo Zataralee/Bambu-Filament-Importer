@@ -253,6 +253,8 @@ public sealed class ManufacturerLibraryUpdateService : IDisposable
                 || string.IsNullOrWhiteSpace(entry.DisplayName)
                 || string.IsNullOrWhiteSpace(entry.Manufacturer)
                 || string.IsNullOrWhiteSpace(entry.Version)
+                || !entry.License.Equals("CC0-1.0", StringComparison.OrdinalIgnoreCase)
+                || !Uri.TryCreate(entry.LicenseUrl, UriKind.Absolute, out _)
                 || entry.ProfileCount <= 0
                 || entry.Sha256.Length != 64
                 || entry.Sha256.Any(character => !Uri.IsHexDigit(character)))
@@ -318,6 +320,8 @@ public sealed class ManufacturerLibraryIndexEntry
     public string DisplayName { get; set; } = "";
     public string Manufacturer { get; set; } = "";
     public string Version { get; set; } = "";
+    public string License { get; set; } = "";
+    public string LicenseUrl { get; set; } = "";
     public int ProfileCount { get; set; }
     public string Sha256 { get; set; } = "";
 }

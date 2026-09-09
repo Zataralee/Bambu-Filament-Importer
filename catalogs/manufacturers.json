@@ -1,5 +1,7 @@
 {
-  "version": "2026.08.29.2",
+  "version": "2026.09.09.1",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
   "manufacturers": [
     {
       "manufacturer": "eSUN",
@@ -134,7 +136,7 @@
       "displayName": "Prusament Filament Library",
       "packageId": "prusament-x1c-p1s-2026-08",
       "outputFile": "Prusament.bflib",
-      "version": "2026.08.29.3",
+      "version": "2026.09.09.1",
       "sourceUrls": ["https://prusament.com/materials/", "https://prusament.com/materials/prusament-pc-blend/", "https://prusament.com/materials/prusament-pa11/"],
       "products": [
         {"name":"Prusament PLA","family":"PLA","nozzleLow":200,"nozzleHigh":220,"nozzle":215,"bedLow":40,"bedHigh":60,"bed":55,"fanMin":100,"fanMax":100,"flow":0.98,"maxVolumetricSpeed":16,"dryingTemp":45,"dryingHours":6,"abrasive":false,"enclosure":false},

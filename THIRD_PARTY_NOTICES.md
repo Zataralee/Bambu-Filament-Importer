@@ -9,6 +9,11 @@ temperature ranges, drying guidance, and material specifications are represented
 as factual data with source references in `catalogs/README.md`; those facts and
 source materials are not made proprietary by BFI's license.
 
+Zataralee's original filament-library contributions and the documented `.bflib`
+format are dedicated under CC0 1.0 Universal as described in
+`LIBRARY_LICENSE.md`. That dedication applies only to rights Zataralee owns and
+does not relicense the third-party material described here.
+
 BFI is published as a self-contained .NET application. Microsoft .NET runtime
 components remain governed by Microsoft's applicable licenses and notices.
 

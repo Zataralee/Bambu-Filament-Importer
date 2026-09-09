@@ -1,12 +1,17 @@
 BFI LIMITED USE LICENSE
-Version 1.0, September 9, 2026
+Version 1.1, September 9, 2026
 
 Copyright (c) 2026 Zataralee. All rights reserved.
 
-This license applies to Bambu Filament Importer ("BFI"), including its source
-code, executable releases, documentation, original package definitions, and
-original filament-library arrangement (collectively, the "Software"), but only
-to the extent those materials are owned by Zataralee.
+This license applies to the Bambu Filament Importer ("BFI") application,
+including its source code, executable releases, user interface, application
+documentation, update and installation mechanisms, and BFI branding
+(collectively, the "Software"), but only to the extent those materials are owned
+by Zataralee.
+
+BFI-authored filament library data and the documented `.bflib` package format are
+not part of the Software under this license. They are made available separately
+under CC0 1.0 Universal as described in `LIBRARY_LICENSE.md`.
 
 1. Limited permission to use
 
@@ -16,13 +21,10 @@ non-transferable, non-sublicensable license to:
 a. download, install, and run an unmodified official BFI executable release for
    personal use or internal use within your business or organization;
 
-b. use filament-library packages supplied with or downloaded by BFI with Bambu
-   Studio for those same purposes;
+b. use BFI's normal features to import or edit filament settings for your own use
+   and to create reasonable backups of your own Bambu Studio configuration; and
 
-c. use BFI's normal features to edit filament settings for your own use and to
-   create reasonable backups of your own Bambu Studio configuration; and
-
-d. make one reasonable backup copy of an official BFI executable release solely
+c. make one reasonable backup copy of an official BFI executable release solely
    for your own recovery purposes.
 
 You may sell physical items printed with the assistance of BFI. This permission
@@ -76,7 +78,13 @@ Bug reports, feature suggestions, and factual filament corrections are welcome a
 do not require permission, but submission does not transfer ownership of third-party
 material that you do not own.
 
-5. Third-party materials
+5. Filament libraries and third-party materials
+
+The separate CC0 dedication permits anyone to create, use, modify, redistribute,
+or sell BFI-authored filament library data and compatible `.bflib` packages. It
+does not grant rights to the BFI application or branding. Creating or distributing
+an independently authored compatible package does not require permission under
+this Software license.
 
 The Software interoperates with Bambu Studio and identifies third-party printers,
 filament manufacturers, and products. Third-party names, trademarks, factual data,

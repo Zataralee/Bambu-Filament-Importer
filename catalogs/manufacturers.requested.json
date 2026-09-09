@@ -1,12 +1,14 @@
 {
-  "version": "2026.08.29.1",
+  "version": "2026.09.09.1",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
   "manufacturers": [
     {
       "manufacturer": "TINMORRY",
       "displayName": "TINMORRY Filament Library",
       "packageId": "tinmorry-neutral-2026-08",
       "outputFile": "TINMORRY.bflib",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
       "sourceUrls": ["https://tinmorry.net/", "https://tinmorry.net/products/glass-fiber-reinforced-pa6-filament-1-kg-1-spool-jade-white"],
       "products": [
         {"name":"TINMORRY Classic PLA","family":"PLA","nozzleLow":190,"nozzleHigh":230,"nozzle":215,"bedLow":30,"bedHigh":65,"bed":55,"fanMin":100,"fanMax":100,"flow":0.98,"maxVolumetricSpeed":16,"dryingTemp":50,"dryingHours":6,"abrasive":false,"enclosure":false},
@@ -44,7 +46,7 @@
       "displayName": "ELEGOO Filament Library",
       "packageId": "elegoo-neutral-2026-08",
       "outputFile": "ELEGOO.bflib",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
       "sourceUrls": ["https://www.elegoo.com/collections/filaments", "https://www.elegoo.com/products/abs-filament-1-75mm-colored-1kg", "https://www.elegoo.com/products/paht-cf-filament-1-75mm-colored-1kg"],
       "products": [
         {"name":"ELEGOO PLA","family":"PLA","nozzleLow":190,"nozzleHigh":220,"nozzle":205,"bedLow":50,"bedHigh":65,"bed":60,"fanMin":100,"fanMax":100,"flow":0.98,"maxVolumetricSpeed":16,"dryingTemp":45,"dryingHours":6,"abrasive":false,"enclosure":false},
@@ -86,7 +88,7 @@
       "displayName": "Creality Filament Library",
       "packageId": "creality-neutral-2026-08",
       "outputFile": "Creality.bflib",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
       "sourceUrls": ["https://store.creality.com/sitemap_products.xml", "https://store.creality.com/products/hyper-series-pla-3d-printing-filament-1kg", "https://store.creality.com/products/ppa-cf-filament-1-75mm-1kg"],
       "products": [
         {"name":"Creality Ender PLA","family":"PLA","nozzleLow":190,"nozzleHigh":220,"nozzle":205,"bedLow":45,"bedHigh":60,"bed":55,"fanMin":100,"fanMax":100,"flow":0.98,"maxVolumetricSpeed":16,"dryingTemp":50,"dryingHours":6,"abrasive":false,"enclosure":false},
@@ -118,7 +120,7 @@
       "displayName": "Atomic Filament Library",
       "packageId": "atomic-filament-neutral-2026-08",
       "outputFile": "Atomic-Filament.bflib",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
       "sourceUrls": ["https://atomicfilament.com/", "https://atomicfilament.com/products/bright-white-opaque-petg-pro", "https://atomicfilament.com/products/natural-asa-filament"],
       "products": [
         {"name":"Atomic PLA","family":"PLA","nozzleLow":190,"nozzleHigh":230,"nozzle":215,"bedLow":45,"bedHigh":60,"bed":55,"fanMin":100,"fanMax":100,"flow":0.98,"maxVolumetricSpeed":16,"dryingTemp":50,"dryingHours":6,"abrasive":false,"enclosure":false,"sourceUrl":"https://atomicfilament.com/products/majestic-brown-pla-filament"},
@@ -139,7 +141,7 @@
       "displayName": "colorFabb Filament Library",
       "packageId": "colorfabb-neutral-2026-08",
       "outputFile": "colorFabb.bflib",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
       "sourceUrls": ["https://colorfabb.com/media/colorfabb_com/products.xml", "https://colorfabb.com/pla-economy-black", "https://colorfabb.com/pa-cf-low-warp"],
       "products": [
         {"name":"colorFabb PLA-PHA","family":"PLA","nozzleLow":195,"nozzleHigh":220,"nozzle":210,"bedLow":50,"bedHigh":60,"bed":55,"fanMin":100,"fanMax":100,"flow":0.98,"maxVolumetricSpeed":14,"dryingTemp":50,"dryingHours":6,"abrasive":false,"enclosure":false},
@@ -178,7 +180,7 @@
       "displayName": "Proto-pasta Filament Library",
       "packageId": "proto-pasta-neutral-2026-08",
       "outputFile": "Proto-pasta.bflib",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
       "sourceUrls": ["https://proto-pasta.com/collections/all", "https://proto-pasta.com/products/high-temp-carbon-fiber-pla-composite", "https://proto-pasta.com/products/black-high-strength-carbon-fiber-pctg"],
       "products": [
         {"name":"Proto-pasta HTPLA","family":"PLA","nozzleLow":190,"nozzleHigh":240,"nozzle":220,"bedLow":0,"bedHigh":60,"bed":55,"fanMin":100,"fanMax":100,"flow":0.98,"maxVolumetricSpeed":16,"dryingTemp":50,"dryingHours":6,"abrasive":false,"enclosure":false},
@@ -215,7 +217,7 @@
       "displayName": "Siraya Tech Filament Library",
       "packageId": "siraya-tech-neutral-2026-08",
       "outputFile": "Siraya-Tech.bflib",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
       "sourceUrls": ["https://siraya.tech/collections/filament", "https://siraya.tech/products/siraya-tech-fibreheart-asa-gf-filament", "https://siraya.tech/products/fibreheart-petg-cf-pro-hf-high-speed-carbon-fiber-petg"],
       "products": [
         {"name":"Siraya Tech Roamr TPU Air HR 80A","family":"TPU","nozzleLow":210,"nozzleHigh":250,"nozzle":230,"bedLow":20,"bedHigh":50,"bed":40,"fanMin":80,"fanMax":100,"flow":0.95,"maxVolumetricSpeed":12,"dryingTemp":60,"dryingHours":6,"abrasive":false,"enclosure":false},
@@ -248,7 +250,7 @@
       "displayName": "HATCHBOX Filament Library",
       "packageId": "hatchbox-neutral-2026-08",
       "outputFile": "HATCHBOX.bflib",
-      "version": "2026.08.29.1",
+      "version": "2026.09.09.1",
       "sourceUrls": ["https://www.hatchbox3d.com/collections", "https://www.hatchbox3d.com/pages/pla-material", "https://www.hatchbox3d.com/pages/petg-material"],
       "products": [
         {"name":"HATCHBOX PLA","family":"PLA","nozzleLow":180,"nozzleHigh":210,"nozzle":200,"bedLow":0,"bedHigh":60,"bed":55,"fanMin":100,"fanMax":100,"flow":0.98,"maxVolumetricSpeed":14,"dryingTemp":50,"dryingHours":6,"abrasive":false,"enclosure":false,"sourceUrl":"https://www.hatchbox3d.com/pages/pla-material"},

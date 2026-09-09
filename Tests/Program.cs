@@ -28,6 +28,15 @@ var manufacturerPackages = Directory.EnumerateFiles(Path.Combine(projectRoot, "p
     .ToList();
 Check(manufacturerPackages.Count == 17, "manufacturer package count");
 Check(manufacturerPackages.Sum(item => item.Manifest.Profiles.Count) == 423, "manufacturer filament total");
+Check(manufacturerPackages.All(item => item.Manifest.License == "CC0-1.0"
+    && item.Manifest.LicenseUrl == "https://creativecommons.org/publicdomain/zero/1.0/"),
+    "manufacturer package public license metadata");
+Check(Directory.EnumerateFiles(Path.Combine(projectRoot, "packages", "manufacturers"), "*.bflib")
+    .All(path =>
+    {
+        using var archive = ZipFile.OpenRead(path);
+        return archive.GetEntry("LIBRARY_LICENSE.md") is not null;
+    }), "manufacturer packages include library license");
 var requestedManufacturers = new[]
 {
     "TINMORRY", "ELEGOO", "Creality", "Atomic Filament", "colorFabb",
@@ -59,6 +68,9 @@ var manufacturerIndex = JsonSerializer.Deserialize<ManufacturerLibraryIndex>(Fil
     new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 Check(manufacturerIndex.Format == "bfi-manufacturer-library-index"
     && manufacturerIndex.Packages.Count == 17, "manufacturer update index");
+Check(manufacturerIndex.Packages.All(entry => entry.License == "CC0-1.0"
+    && entry.LicenseUrl == "https://creativecommons.org/publicdomain/zero/1.0/"),
+    "manufacturer index public license metadata");
 Check(manufacturerIndex.Packages.All(entry =>
     Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(projectRoot, "packages", "manufacturers", entry.FileName))))
         .Equals(entry.Sha256, StringComparison.OrdinalIgnoreCase)), "manufacturer update hashes");
