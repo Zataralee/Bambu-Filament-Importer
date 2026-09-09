@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0 - Unreleased
+
+- Changed future BFI revisions from MIT to the BFI Limited Use License 1.0, permitting ordinary use of official builds while reserving modification, resale, and redistribution rights.
+- Added an explicit license history and third-party provenance notice. Versions v0.4.15 and earlier retain their original MIT license.
+
 ## 0.4.15 - 2026-09-02
 
 - Redesigned Report Bug as a compact, centered form with clearer hierarchy and a prominent Create Report action.

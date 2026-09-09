@@ -1,21 +1,123 @@
-MIT License
+BFI LIMITED USE LICENSE
+Version 1.0, September 9, 2026
 
-Copyright (c) 2026 Zataralee
+Copyright (c) 2026 Zataralee. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This license applies to Bambu Filament Importer ("BFI"), including its source
+code, executable releases, documentation, original package definitions, and
+original filament-library arrangement (collectively, the "Software"), but only
+to the extent those materials are owned by Zataralee.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Limited permission to use
+
+Subject to this license, Zataralee grants you a personal, non-exclusive,
+non-transferable, non-sublicensable license to:
+
+a. download, install, and run an unmodified official BFI executable release for
+   personal use or internal use within your business or organization;
+
+b. use filament-library packages supplied with or downloaded by BFI with Bambu
+   Studio for those same purposes;
+
+c. use BFI's normal features to edit filament settings for your own use and to
+   create reasonable backups of your own Bambu Studio configuration; and
+
+d. make one reasonable backup copy of an official BFI executable release solely
+   for your own recovery purposes.
+
+You may sell physical items printed with the assistance of BFI. This permission
+does not allow you to sell, provide, or redistribute BFI itself.
+
+2. Restrictions
+
+Except with Zataralee's prior written permission, you may not:
+
+a. modify, adapt, translate, or create derivative works from the Software;
+
+b. copy the Software except as expressly allowed in Section 1;
+
+c. publish, distribute, mirror, upload, transfer, sublicense, rent, lease, lend,
+   sell, resell, or otherwise provide the Software or any modified copy to
+   another person or organization;
+
+d. incorporate the Software or any part of it into another product, application,
+   service, library, package, or commercial offering;
+
+e. operate the Software as a hosted service, managed service, or service bureau
+   for the benefit of third parties;
+
+f. remove or alter copyright, license, attribution, trademark, or proprietary
+   notices; or
+
+g. use Zataralee's name or BFI branding to imply affiliation, sponsorship,
+   endorsement, or authorization.
+
+These restrictions do not limit rights that applicable law does not permit the
+copyright owner to restrict.
+
+3. Source code and public hosting
+
+Making source code visible does not grant permission to use, modify, distribute,
+or create derivative works from it beyond this license. If the Software is hosted
+in a public GitHub repository, GitHub's Terms of Service may independently permit
+viewing and forking within GitHub. Such platform permission does not grant the
+additional rights prohibited by Section 2.
+
+4. Contributions
+
+You may submit a proposed code modification only after receiving Zataralee's
+written invitation or permission to do so. By submitting an authorized
+contribution, you grant Zataralee a perpetual, worldwide, irrevocable,
+royalty-free, transferable, sublicensable license to use, reproduce, modify,
+distribute, license, sell, and otherwise exploit that contribution as part of BFI
+or another work. A separate written contributor agreement supersedes this section.
+
+Bug reports, feature suggestions, and factual filament corrections are welcome and
+do not require permission, but submission does not transfer ownership of third-party
+material that you do not own.
+
+5. Third-party materials
+
+The Software interoperates with Bambu Studio and identifies third-party printers,
+filament manufacturers, and products. Third-party names, trademarks, factual data,
+code, profile fragments, runtime components, and other materials remain subject to
+their respective owners' rights and applicable licenses. This license does not
+claim ownership of, replace, restrict, or grant rights to those materials.
+
+BFI is an independent project and is not affiliated with or endorsed by Bambu Lab
+or any filament manufacturer unless expressly stated in writing by that party.
+
+6. Earlier releases
+
+This license applies only to repository revisions and releases that include it.
+BFI versions v0.4.15 and earlier were released under the MIT License and remain
+available under the license that accompanied those versions. Nothing in this
+license withdraws or retroactively limits rights already granted for those versions.
+
+7. Termination
+
+Your rights under this license terminate automatically if you violate its terms.
+Upon termination, you must stop using the Software and delete copies covered by
+this license. Sections 2 through 10 survive termination. Zataralee may separately
+reinstate permission in writing.
+
+8. Updates and availability
+
+This license does not promise updates, support, compatibility, continued download
+availability, or access to any particular filament library or online service.
+
+9. Disclaimer of warranty
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. USE OF FILAMENT SETTINGS AND
+MODIFICATION OF BAMBU STUDIO CONFIGURATION ARE AT YOUR OWN RISK.
+
+10. Limitation of liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, ZATARALEE WILL NOT BE LIABLE FOR ANY
+CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM OR RELATED TO THE SOFTWARE OR ITS
+USE, WHETHER IN CONTRACT, TORT, OR OTHERWISE.
+
+For permission beyond this license, contact Zataralee through the official BFI
+repository. Permission is valid only when provided in writing by Zataralee.

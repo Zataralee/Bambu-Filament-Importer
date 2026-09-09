@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.4.15 | By Zataralee**
+**Development version 0.5.0 | Current public release 0.4.15 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -127,10 +127,24 @@ The smoke suite uses a local Bambu Studio installation for read-only integration
 
 ## Contributing
 
-Bug reports, manufacturer requests, tested parameter corrections, and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting profile changes. Include a link to the manufacturer's official technical data whenever possible.
+Bug reports, manufacturer requests, and tested parameter corrections are welcome.
+Code modifications and pull requests require Zataralee's prior written permission.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting material. Include a link
+to the manufacturer's official technical data whenever possible.
 
 ## Attribution
 
 Bambu Filament Importer is created by **Zataralee**. It is not affiliated with or endorsed by Bambu Lab or any filament manufacturer. Product and company names belong to their respective owners.
 
-Released under the [MIT License](LICENSE).
+## License
+
+Current development revisions are provided under the proprietary
+[BFI Limited Use License 1.0](LICENSE). You may install and use unmodified official
+builds, including for internal business use, but modification, resale, sublicensing,
+hosting, and redistribution require Zataralee's prior written permission.
+
+Versions `v0.4.15` and earlier remain under the MIT License that accompanied those
+releases. GitHub's terms permit viewing and on-platform forking while this repository
+is public; that does not grant broader modification or distribution rights for the
+current edition. See [license history](LICENSE_HISTORY.md) and
+[third-party notices](THIRD_PARTY_NOTICES.md).

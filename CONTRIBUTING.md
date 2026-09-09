@@ -1,6 +1,7 @@
 # Contributing
 
-Thanks for helping improve Bambu Filament Importer.
+Thanks for helping improve Bambu Filament Importer. Current revisions are
+proprietary source-visible software under the [BFI Limited Use License](LICENSE).
 
 ## Bug Reports
 
@@ -29,6 +30,12 @@ Regenerate packages after catalog changes:
 ```
 
 ## Pull Requests
+
+Do not create or publish a modified BFI codebase or submit a code pull request
+unless Zataralee has first invited that contribution or given written permission.
+Opening an authorized pull request means agreeing to the contribution grant in
+Section 4 of the license. Bug reports, feature requests, and factual filament
+corrections do not require prior permission.
 
 1. Keep changes focused.
 2. Build with `dotnet build -c Release`.

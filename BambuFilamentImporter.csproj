@@ -9,10 +9,11 @@
     <AssemblyName>BambuFilamentImporter</AssemblyName>
     <StartupObject>BambuFilamentImporter.Program</StartupObject>
     <ApplicationIcon>BFI Icon.ico</ApplicationIcon>
-    <Version>0.4.15</Version>
+    <Version>0.5.0</Version>
     <Authors>Zataralee</Authors>
     <Product>Bambu Filament Importer</Product>
     <Description>Native Windows utility for managing and importing manufacturer filament libraries into Bambu Studio.</Description>
+    <Copyright>Copyright (c) 2026 Zataralee. All rights reserved.</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
