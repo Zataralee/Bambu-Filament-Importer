@@ -51,7 +51,7 @@ public static class PrinterProfileExpander
             var sourcePath = string.IsNullOrWhiteSpace(product.OriginalRelativePath)
                 ? product.RelativePath
                 : product.OriginalRelativePath;
-            var baseJson = JsonNode.Parse(package.ProfileJsonByPath[sourcePath])!.AsObject();
+            var baseJson = BambuJson.Parse(package.ProfileJsonByPath[sourcePath])!.AsObject();
             var baseName = product.Name.EndsWith("@base", StringComparison.OrdinalIgnoreCase)
                 ? product.Name
                 : product.Name + " @base";

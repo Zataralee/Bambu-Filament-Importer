@@ -64,7 +64,7 @@ public sealed class FilamentSettingsService
             return 0;
         }
 
-        var profile = JsonNode.Parse(File.ReadAllText(entry.ProfilePath))!.AsObject();
+        var profile = BambuJson.Parse(File.ReadAllText(entry.ProfilePath))!.AsObject();
         foreach (var setting in modified)
         {
             profile[setting.Key] = ParseValue(setting);
@@ -85,7 +85,7 @@ public sealed class FilamentSettingsService
             return;
         }
 
-        var json = JsonNode.Parse(File.ReadAllText(fullPath))!.AsObject();
+        var json = BambuJson.Parse(File.ReadAllText(fullPath))!.AsObject();
         var inherits = json["inherits"]?.GetValue<string>();
         if (!string.IsNullOrWhiteSpace(inherits))
         {
@@ -159,7 +159,7 @@ public sealed class FilamentSettingsService
     {
         try
         {
-            var json = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+            var json = BambuJson.Parse(File.ReadAllText(path))!.AsObject();
             var name = json["name"]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(name))
             {

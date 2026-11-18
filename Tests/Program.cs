@@ -89,9 +89,12 @@ var blankDisplayAliases = manufacturerPackages
 Check(blankDisplayAliases.Count == 0, "all package filament aliases remain visible");
 
 var livePaths = new BambuPaths();
+StudioCompatibilityTests.CheckJsonReader();
 BambuCatalogIntegrity.ValidateProfileRoot(livePaths.RoamingProfileRoot);
 BambuCatalogIntegrity.ValidateProfileRoot(livePaths.ProgramProfileRoot);
 Check(true, "live catalog integrity");
+new AmsFilamentIdRepairService(livePaths).Audit();
+Check(true, "live AMS ID audit");
 var monitorProbeState = 0;
 var monitorStates = new System.Collections.Concurrent.ConcurrentQueue<bool>();
 using (var processMonitor = new BambuProcessMonitor(
@@ -216,6 +219,7 @@ var testPaths = new BambuPaths(roaming, program);
 
 try
 {
+    StudioCompatibilityTests.CheckUpdatedCatalog(livePaths, sandbox, projectRoot);
     var libraryUpdateFolder = Path.Combine(sandbox, "Manufacturer Libraries");
     var legacyLibraryFolder = Path.Combine(sandbox, "Legacy Manufacturer Libraries");
     Directory.CreateDirectory(legacyLibraryFolder);

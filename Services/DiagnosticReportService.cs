@@ -152,7 +152,7 @@ public sealed class DiagnosticReportService
                     continue;
                 }
 
-                var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject();
+                var manifest = BambuJson.Parse(File.ReadAllText(manifestPath))?.AsObject();
                 var catalogVersion = manifest?["version"]?.GetValue<string>();
                 if (!string.IsNullOrWhiteSpace(catalogVersion))
                 {
@@ -328,7 +328,7 @@ public sealed class DiagnosticReportService
             {
                 var text = File.ReadAllText(paths.ConfigPath);
                 var jsonText = text.Split("\n# MD5 checksum ", StringSplitOptions.None)[0].TrimEnd();
-                config = JsonNode.Parse(jsonText)?.AsObject();
+                config = BambuJson.Parse(jsonText)?.AsObject();
             }
             catch
             {

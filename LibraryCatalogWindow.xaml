@@ -66,7 +66,7 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <TextBlock Grid.Row="3" Text="Downloaded packages remain separate from Bambu Studio until you review and install them from the Import Package tab."
+        <TextBlock Grid.Row="3" Text="Downloading a library does not change Bambu Studio profiles. Choose filaments in BFI, review the changes, then install them."
                    TextWrapping="Wrap" Foreground="{DynamicResource MutedTextBrush}" Margin="0,10,0,14"/>
 
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">

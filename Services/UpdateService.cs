@@ -33,7 +33,14 @@ public static class UpdateService
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        var root = document.RootElement;
+        return ParseRelease(document.RootElement);
+    }
+
+    public static UpdateRelease ParseRelease(JsonElement root)
+    {
+        if ((root.TryGetProperty("draft", out var draft) && draft.GetBoolean())
+            || (root.TryGetProperty("prerelease", out var prerelease) && prerelease.GetBoolean()))
+            throw new InvalidDataException("The update feed returned an unpublished or prerelease build.");
         var tagName = root.GetProperty("tag_name").GetString()
             ?? throw new InvalidDataException("The latest GitHub release has no version tag.");
         if (!Version.TryParse(tagName.Trim().TrimStart('v', 'V'), out var version))

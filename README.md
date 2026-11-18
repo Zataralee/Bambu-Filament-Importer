@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Development version 0.5.0 | Current public release 0.4.15 | By Zataralee**
+**Version 0.6.0 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -50,17 +50,20 @@ Official source references and catalog policy are documented in [catalogs/README
 - Compares actual `compatible_printers` coverage and generates only missing profiles.
 - Handles Bambu's P1S/P1P live-device identity crossover so P1-family profiles remain visible in the AMS material picker.
 - Imports to the Device/AMS catalog, Project Library, or both.
-- Scans the current library as Manufacturer > Filament > printer profile.
+- Provides a compact workspace with **Add filaments**, **My library**, and **Maintenance**.
+- Searches across downloaded manufacturers and reviews a combined selection before installation.
+- Groups the current library by product with an explicit printer-profile choice before editing.
 - Displays and edits direct and inherited temperatures, cooling, drying, flow, retraction, and calibration values.
-- Renames and removes individual profiles, complete filaments, or manufacturers.
+- Removes individual profiles from My library; advanced rename and bulk removal tools are available in Maintenance.
 - Detects duplicates and preserves existing compatible Bambu presets.
 - Selects or deselects every filament in a loaded package with one command.
 - Audits and repairs AMS filament IDs that are too long or collide after printer synchronization.
 - Creates complete `.bflbackup` library backups and merges them during restoration.
 - Creates safety backups before changing Bambu Studio files.
 - Validates the complete catalog before and after installation and rolls back a failed write automatically.
-- Monitors Bambu Studio continuously, locks the workspace whenever it opens, and refreshes local records when it closes.
-- Detects packaged profiles left only in an inactive Program Files mirror after a Bambu catalog refresh and loads the affected package for repair.
+- Monitors Bambu Studio continuously, pauses live writes while it is open, and refreshes local records when it closes (without discarding unsaved edits).
+- Offers the existing catalog-drift repair tools through Maintenance → Advanced library tools.
+- Provides an optional separate test copy for trying imports, edits, and restores without changing Studio.
 - Checks for BFI and filament-library updates at startup without installing either automatically.
 - Presents a selectable manufacturer catalog so users download only the libraries they want.
 - Notifies existing users only about updates to installed libraries and separately announces newly published libraries.
@@ -81,12 +84,18 @@ The **Report Bug** action creates a local ZIP containing the user's report, a ve
 1. Download the current Windows release and extract it to a normal writable folder.
 2. Close Bambu Studio.
 3. Start `BambuFilamentImporter.exe`.
-4. Select **Download & Update Filament Libraries**, choose the manufacturers you want, and download them.
-5. Open the **Import Package** tab and select **Import Filament Package**.
-6. Choose a `.bflib` file from the managed `Manufacturer Libraries` folder opened by BFI.
-7. Select the destination and target printer models, review duplicates, and install.
+4. Select **Download libraries…**, choose the manufacturers you want, and download them.
+5. In **Add filaments**, search and select products across your downloaded libraries.
+6. Choose the destination, printers, and nozzles in the selection panel.
+7. Select **Review changes**, then **Install into Bambu Studio**. BFI creates a backup first.
 
-Use **Report Bug** in the header to create a sanitized diagnostic package when reporting a problem. Paste the copied report into the GitHub page and drag the selected ZIP onto the issue.
+Use **My library** to choose a product and its exact printer profile before editing. **Maintenance** contains backups, health checks, and advanced tools. To try changes separately, select **Test copy**; this copy persists until you refresh it from Studio.
+
+BFI checks for application and filament-library updates at startup. **Check for updates** repeats both checks. Application releases, downloaded library updates, and newly available manufacturers have separate notices. Downloading a package refreshes the available products; it does not overwrite installed profiles or your tuning. Choose new products or missing printer coverage and review before installing.
+
+Existing users can install v0.6.0 from the update notice in their current BFI. The updater keeps the managed package library, notification history, theme preference, and Studio profiles.
+
+Use **Report a problem** in the header to create a sanitized diagnostic package when reporting a problem. Paste the copied report into the GitHub page and drag the selected ZIP onto the issue.
 
 Program Files mirroring requires Administrator access. Normal roaming-catalog and Project Library imports do not.
 
@@ -94,7 +103,7 @@ Program Files mirroring requires Administrator access. Normal roaming-catalog an
 
 Manufacturer temperature ranges are starting points. Flow ratio and maximum volumetric speed require calibration for the individual printer, nozzle, and spool. Abrasive composites require appropriate hardened components and nozzle size.
 
-Back up the library before extensive changes. The application can create a complete `.bflbackup` from the toolbar.
+Back up the library before extensive changes. Maintenance can create and restore complete `.bflbackup` files. Changes in the compact workspace also create automatic backups.
 
 ## `.bflib` Format
 
@@ -112,7 +121,7 @@ use under [CC0 1.0 Universal](LIBRARY_LICENSE.md). Anyone may create, modify,
 redistribute, or sell compatible library packages. Filament manufacturers are
 especially encouraged to publish and maintain packages for their own materials.
 
-AMS filament IDs are limited to eight characters and must be unique. The importer normalizes package IDs during installation and can repair older installed libraries from the **Current Bambu Library** tab.
+AMS filament IDs are limited to eight characters and must be unique. The importer normalizes package IDs during installation and can repair older installed libraries through **Maintenance → Advanced library tools**.
 
 ## Building
 
@@ -125,6 +134,7 @@ Requirements:
 ```powershell
 & .\tools\BuildManufacturerPackages.ps1
 dotnet run --project .\Tests\SmokeTests.csproj -c Release
+dotnet run --project .\Preview\Tests\PreviewTests.csproj -c Release -- .
 dotnet publish .\BambuFilamentImporter.csproj -c Release -r win-x64 --self-contained true `
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
 ```
@@ -144,7 +154,7 @@ Bambu Filament Importer is created by **Zataralee**. It is not affiliated with o
 
 ## License
 
-Current development revisions are provided under the proprietary
+Current revisions are provided under the proprietary
 [BFI Limited Use License 1.1](LICENSE). You may install and use unmodified official
 builds, including for internal business use, but modification, resale, sublicensing,
 hosting, and redistribution require Zataralee's prior written permission.

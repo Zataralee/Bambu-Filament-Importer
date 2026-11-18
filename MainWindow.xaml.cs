@@ -934,7 +934,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var inherits = System.Text.Json.Nodes.JsonNode.Parse(json)?["inherits"]?.GetValue<string>();
+        var inherits = BambuJson.Parse(json)?["inherits"]?.GetValue<string>();
         var baseProfile = _package.Manifest.Profiles.FirstOrDefault(candidate =>
             candidate.OriginalName.Equals(inherits, StringComparison.OrdinalIgnoreCase));
         if (baseProfile is not null)

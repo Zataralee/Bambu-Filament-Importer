@@ -131,7 +131,7 @@ public sealed class PrinterDiscoveryService
         {
             var text = File.ReadAllText(_paths.ConfigPath);
             var jsonText = text.Split("\n# MD5 checksum ", StringSplitOptions.None)[0].TrimEnd();
-            return JsonNode.Parse(jsonText)?.AsObject();
+            return BambuJson.Parse(jsonText)?.AsObject();
         }
         catch (JsonException)
         {

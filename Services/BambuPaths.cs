@@ -32,7 +32,7 @@ public sealed class BambuPaths
             {
                 var text = File.ReadAllText(ConfigPath);
                 var jsonText = text.Split("\n# MD5 checksum ", StringSplitOptions.None)[0].TrimEnd();
-                var config = JsonNode.Parse(jsonText)?.AsObject();
+                var config = BambuJson.Parse(jsonText)?.AsObject();
                 var folder = config?["app"]?["preset_folder"]?.GetValue<string>()
                     ?? config?["preset_folder"]?.GetValue<string>();
                 if (!string.IsNullOrWhiteSpace(folder))

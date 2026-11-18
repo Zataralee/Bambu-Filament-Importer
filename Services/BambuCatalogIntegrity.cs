@@ -13,7 +13,7 @@ public static class BambuCatalogIntegrity
             throw new InvalidDataException($"Bambu catalog is incomplete: {profileRoot}");
         }
 
-        var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject()
+        var manifest = BambuJson.Parse(File.ReadAllText(manifestPath))?.AsObject()
             ?? throw new InvalidDataException($"Bambu catalog manifest could not be read: {manifestPath}");
         ValidateProfileRoot(profileRoot, manifest, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
     }
@@ -70,7 +70,7 @@ public static class BambuCatalogIntegrity
                 throw new InvalidDataException($"Bambu catalog profile file is missing: {name} -> {relativePath}");
             }
 
-            var profile = JsonNode.Parse(profileJson)?.AsObject()
+            var profile = BambuJson.Parse(profileJson)?.AsObject()
                 ?? throw new InvalidDataException($"Filament profile could not be read: {profilePath}");
             var jsonName = profile["name"]?.GetValue<string>();
             if (!string.Equals(name, jsonName, StringComparison.OrdinalIgnoreCase))

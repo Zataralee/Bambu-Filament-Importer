@@ -109,7 +109,7 @@ public sealed class BambuLibraryEditor
         foreach (var entry in baseProfiles)
         {
             FileBackup.Create(entry.ProfilePath, "bflib-edit-backup");
-            var profile = JsonNode.Parse(File.ReadAllText(entry.ProfilePath))!.AsObject();
+            var profile = BambuJson.Parse(File.ReadAllText(entry.ProfilePath))!.AsObject();
             profile["filament_vendor"] = new JsonArray(newName);
             File.WriteAllText(entry.ProfilePath, profile.ToJsonString(WriteOptions) + Environment.NewLine);
         }
@@ -149,7 +149,7 @@ public sealed class BambuLibraryEditor
         }
 
         FileBackup.Create(oldPath, "bflib-edit-backup");
-        var profile = JsonNode.Parse(File.ReadAllText(oldPath))!.AsObject();
+        var profile = BambuJson.Parse(File.ReadAllText(oldPath))!.AsObject();
         profile["name"] = newName;
         if (profile["filament_settings_id"] is JsonArray settingsIds)
         {
@@ -186,7 +186,7 @@ public sealed class BambuLibraryEditor
 
     private static void UpdateProfileFile(string profileRoot, string profilePath, string oldName, string newName, string newVendorGroup)
     {
-        var node = JsonNode.Parse(File.ReadAllText(profilePath))!.AsObject();
+        var node = BambuJson.Parse(File.ReadAllText(profilePath))!.AsObject();
         node["name"] = newName;
 
         if (!string.IsNullOrWhiteSpace(newVendorGroup) && newName.EndsWith("@base", StringComparison.OrdinalIgnoreCase))
@@ -223,7 +223,7 @@ public sealed class BambuLibraryEditor
         }
 
         FileBackup.Create(basePath, "bflib-edit-backup");
-        var baseNode = JsonNode.Parse(File.ReadAllText(basePath))!.AsObject();
+        var baseNode = BambuJson.Parse(File.ReadAllText(basePath))!.AsObject();
         baseNode["filament_vendor"] = new JsonArray(newVendorGroup);
         File.WriteAllText(basePath, baseNode.ToJsonString(WriteOptions) + Environment.NewLine);
     }
@@ -250,7 +250,7 @@ public sealed class BambuLibraryEditor
     {
         var manifestPath = Path.Combine(profileRoot, "BBL.json");
         FileBackup.Create(manifestPath, "bflib-edit-backup");
-        var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))!.AsObject();
+        var manifest = BambuJson.Parse(File.ReadAllText(manifestPath))!.AsObject();
         var filamentList = manifest["filament_list"]!.AsArray();
         foreach (var item in filamentList)
         {
@@ -279,7 +279,7 @@ public sealed class BambuLibraryEditor
 
             try
             {
-                var node = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+                var node = BambuJson.Parse(File.ReadAllText(path))!.AsObject();
                 if (!string.Equals(node["inherits"]?.GetValue<string>(), oldName, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
@@ -304,7 +304,7 @@ public sealed class BambuLibraryEditor
             return null;
         }
 
-        var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject();
+        var manifest = BambuJson.Parse(File.ReadAllText(manifestPath))?.AsObject();
         var item = manifest?["filament_list"]?.AsArray().FirstOrDefault(entry =>
             string.Equals(entry?["name"]?.GetValue<string>(), name, StringComparison.OrdinalIgnoreCase));
         var relativePath = item?["sub_path"]?.GetValue<string>();
@@ -317,7 +317,7 @@ public sealed class BambuLibraryEditor
     {
         var manifestPath = Path.Combine(profileRoot, "BBL.json");
         FileBackup.Create(manifestPath, "bflib-remove-backup");
-        var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))!.AsObject();
+        var manifest = BambuJson.Parse(File.ReadAllText(manifestPath))!.AsObject();
         var filamentList = manifest["filament_list"]!.AsArray();
         var names = entries.Select(entry => entry.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var paths = entries.Select(entry => entry.RelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -408,7 +408,7 @@ public sealed class BambuLibraryEditor
     {
         var text = File.ReadAllText(_paths.ConfigPath);
         var jsonText = text.Split("\n# MD5 checksum ", StringSplitOptions.None)[0].TrimEnd();
-        return JsonNode.Parse(jsonText)!.AsObject();
+        return BambuJson.Parse(jsonText)!.AsObject();
     }
 
     private void SaveConfig(JsonObject config) =>
@@ -432,7 +432,7 @@ public sealed class BambuLibraryEditor
 
                 try
                 {
-                    var node = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+                    var node = BambuJson.Parse(File.ReadAllText(path))!.AsObject();
                     if (selectedNames.Contains(node["inherits"]?.GetValue<string>() ?? ""))
                     {
                         throw new InvalidOperationException(

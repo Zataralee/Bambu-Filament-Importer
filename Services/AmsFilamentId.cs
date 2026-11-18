@@ -78,7 +78,7 @@ public static class AmsFilamentId
                 continue;
             }
 
-            var node = JsonNode.Parse(json)?.AsObject()
+            var node = BambuJson.Parse(json)?.AsObject()
                 ?? throw new InvalidDataException($"Profile JSON could not be parsed: {profile.Name}");
             node["filament_id"] = Assign(
                 Read(node),

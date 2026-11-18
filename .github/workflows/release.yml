@@ -36,6 +36,9 @@ jobs:
             }
           }
 
+      - name: Test workspace transactions and update notifications
+        run: dotnet run --project ./Preview/Tests/PreviewTests.csproj -c Release -- .
+
       - name: Publish standalone Windows application
         run: >-
           dotnet publish ./BambuFilamentImporter.csproj -c Release -r win-x64
@@ -55,6 +58,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $notesPath = "./docs/releases/$env:GITHUB_REF_NAME.md"
+          $notesArgs = if (Test-Path $notesPath) { @('--notes-file', $notesPath) } else { @('--generate-notes') }
           gh release create "$env:GITHUB_REF_NAME" `
             './release/app/BambuFilamentImporter.exe' `
             './LICENSE' `
@@ -63,4 +68,4 @@ jobs:
             './THIRD_PARTY_NOTICES.md' `
             "./release/Bambu-Filament-Importer-$env:GITHUB_REF_NAME-win-x64.zip" `
             --title "Bambu Filament Importer $env:GITHUB_REF_NAME" `
-            --generate-notes
+            @notesArgs

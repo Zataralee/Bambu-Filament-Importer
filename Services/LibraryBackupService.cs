@@ -255,7 +255,7 @@ public sealed class LibraryBackupService
         var manifestPath = Path.Combine(_paths.RoamingProfileRoot, "BBL.json");
         Directory.CreateDirectory(Path.GetDirectoryName(manifestPath)!);
         var manifest = File.Exists(manifestPath)
-            ? JsonNode.Parse(File.ReadAllText(manifestPath))!.AsObject()
+            ? BambuJson.Parse(File.ReadAllText(manifestPath))!.AsObject()
             : new JsonObject();
         var filamentList = manifest["filament_list"] as JsonArray ?? [];
         manifest["filament_list"] = filamentList;
@@ -403,7 +403,7 @@ public sealed class LibraryBackupService
     {
         var text = File.ReadAllText(path);
         var jsonText = text.Split("\n# MD5 checksum ", StringSplitOptions.None)[0].TrimEnd();
-        return JsonNode.Parse(jsonText)!.AsObject();
+        return BambuJson.Parse(jsonText)!.AsObject();
     }
 
     private static List<string> ReadStringArray(JsonArray? array) => array?

@@ -94,7 +94,7 @@ public sealed class BambuInstaller
             throw new FileNotFoundException("Bambu profile manifest was not found.", manifestPath);
         }
 
-        var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))?.AsObject()
+        var manifest = BambuJson.Parse(File.ReadAllText(manifestPath))?.AsObject()
             ?? throw new InvalidDataException($"Bambu profile manifest could not be read: {manifestPath}");
         var filamentList = manifest["filament_list"]?.AsArray()
             ?? throw new InvalidDataException($"Bambu profile manifest has no filament_list: {manifestPath}");
@@ -266,7 +266,7 @@ public sealed class BambuInstaller
                 json = File.ReadAllText(profilePath);
             }
 
-            var profile = JsonNode.Parse(json)?.AsObject();
+            var profile = BambuJson.Parse(json)?.AsObject();
             var inherits = profile?["inherits"]?.GetValue<string>();
             if (string.IsNullOrWhiteSpace(inherits)
                 || !replacedBaseNames.TryGetValue(inherits, out var replacement))
@@ -353,7 +353,7 @@ public sealed class BambuInstaller
         Backup(_paths.ConfigPath, result);
         var text = File.ReadAllText(_paths.ConfigPath);
         var jsonText = text.Split("\n# MD5 checksum ", StringSplitOptions.None)[0].TrimEnd();
-        var config = JsonNode.Parse(jsonText)!.AsObject();
+        var config = BambuJson.Parse(jsonText)!.AsObject();
         var filaments = config["filaments"] as JsonArray ?? [];
         config["filaments"] = filaments;
 
@@ -430,7 +430,7 @@ public sealed class BambuInstaller
             ? profile.RelativePath
             : profile.OriginalRelativePath;
         var json = package.ProfileJsonByPath[sourcePath];
-        var node = JsonNode.Parse(json)!.AsObject();
+        var node = BambuJson.Parse(json)!.AsObject();
         var originalJsonName = node["name"]?.GetValue<string>();
         if (!string.IsNullOrWhiteSpace(originalJsonName) && nameMap.TryGetValue(originalJsonName, out var mappedName))
         {
@@ -499,7 +499,7 @@ public sealed class BambuInstaller
         }
 
         var sourcePath = string.IsNullOrWhiteSpace(profile.OriginalRelativePath) ? profile.RelativePath : profile.OriginalRelativePath;
-        var json = JsonNode.Parse(package.ProfileJsonByPath[sourcePath])!.AsObject();
+        var json = BambuJson.Parse(package.ProfileJsonByPath[sourcePath])!.AsObject();
         var inherits = json["inherits"]?.GetValue<string>();
         if (!string.IsNullOrWhiteSpace(inherits) && profilesByOriginalName.TryGetValue(inherits, out var parent))
         {

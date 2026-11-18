@@ -21,7 +21,7 @@ public partial class App : Application
 
         var settings = AppSettingsStore.Load();
         ThemeService.Apply(settings.DarkMode);
-        new MainWindow().Show();
+        new Workspace.WorkspaceWindow().Show();
         if (!string.IsNullOrWhiteSpace(UpdateService.PendingCleanupDirectory))
         {
             UpdateService.ScheduleCleanup(UpdateService.PendingCleanupDirectory);

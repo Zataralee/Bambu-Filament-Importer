@@ -1,7 +1,17 @@
 # Changelog
 
-## 0.5.0 - Unreleased
+## 0.6.0 - 2026-11-18
 
+- Promoted the tested Compact workspace to the main application, with Add filaments, My library, and Maintenance, plus the original application icon.
+- Browse and select products across downloaded manufacturers, choose printers and nozzles alongside the list, then review exact changes before installing.
+- Added explicit profile scope for editing, searchable settings, inheritance reset, and automatic full backups with transactional rollback.
+- Kept advanced rename, bulk removal, AMS repair, and legacy package import available through Maintenance.
+- Retained separate startup notices for stable BFI updates, updates to downloaded filament libraries, and newly published manufacturers. Check for updates checks both feeds; existing downloads and notification history are reused.
+- Kept the stable release tag and Windows ZIP format compatible with existing BFI updaters. Downloads still require a user action and do not overwrite tuned profiles.
+- Added an optional isolated test copy and regression checks for multi-manufacturer installation, preserved tuning, stale reviews, rollback, and update notifications.
+
+- Fixed compatibility with Bambu Studio 2.9.1 catalogs containing repeated JSON settings (including PC/PVA AMS drying times). All Bambu JSON readers now use the last property value consistently, restoring imports, removals, settings resolution, and AMS ID audits without modifying upstream profiles or bypassing catalog validation.
+- Added regression coverage for duplicate settings, the reported SUNLU import on an isolated copy of the installed catalog, editing/removal, and preservation of upstream files.
 - Changed future BFI application revisions from MIT to the BFI Limited Use License 1.1, permitting ordinary use of official builds while reserving modification, resale, and redistribution rights.
 - Dedicated BFI-authored filament library data and the documented `.bflib` package format to public use under CC0 1.0 Universal, including modification, redistribution, and commercial use.
 - Added an explicit license history and third-party provenance notice. Versions v0.4.15 and earlier retain their original MIT license.

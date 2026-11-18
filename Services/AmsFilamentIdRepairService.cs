@@ -47,7 +47,7 @@ public sealed class AmsFilamentIdRepairService
         {
             foreach (var file in item.Files)
             {
-                var profile = JsonNode.Parse(File.ReadAllText(file.Path))?.AsObject()
+                var profile = BambuJson.Parse(File.ReadAllText(file.Path))?.AsObject()
                     ?? throw new InvalidDataException($"Profile JSON could not be parsed: {file.Path}");
                 var backup = FileBackup.Create(file.Path, "bflib-ams-id-backup");
                 if (!string.IsNullOrWhiteSpace(backup))
@@ -140,7 +140,7 @@ public sealed class AmsFilamentIdRepairService
             {
                 try
                 {
-                    var profile = JsonNode.Parse(File.ReadAllText(path))?.AsObject();
+                    var profile = BambuJson.Parse(File.ReadAllText(path))?.AsObject();
                     var name = profile?["name"]?.GetValue<string>() ?? "";
                     var id = profile is null ? null : AmsFilamentId.Read(profile);
                     if (!name.EndsWith("@base", StringComparison.OrdinalIgnoreCase)

@@ -36,7 +36,7 @@ public sealed class BambuLibraryScanner
         {
             var text = File.ReadAllText(_paths.ConfigPath);
             var jsonText = text.Split("\n# MD5 checksum ", StringSplitOptions.None)[0].TrimEnd();
-            var config = JsonNode.Parse(jsonText)!.AsObject();
+            var config = BambuJson.Parse(jsonText)!.AsObject();
             var filaments = config["filaments"]?.AsArray();
             if (filaments is null)
             {
@@ -68,7 +68,7 @@ public sealed class BambuLibraryScanner
             return;
         }
 
-        var manifest = JsonNode.Parse(File.ReadAllText(manifestPath))!.AsObject();
+        var manifest = BambuJson.Parse(File.ReadAllText(manifestPath))!.AsObject();
         var filamentList = manifest["filament_list"]?.AsArray();
         if (filamentList is null)
         {
@@ -158,7 +158,7 @@ public sealed class BambuLibraryScanner
             {
                 try
                 {
-                    var profile = JsonNode.Parse(File.ReadAllText(profilePath))!.AsObject();
+                    var profile = BambuJson.Parse(File.ReadAllText(profilePath))!.AsObject();
                     var name = profile["name"]?.GetValue<string>() ?? Path.GetFileNameWithoutExtension(profilePath);
                     if (string.IsNullOrWhiteSpace(name))
                     {
@@ -207,7 +207,7 @@ public sealed class BambuLibraryScanner
     {
         try
         {
-            var profile = JsonNode.Parse(File.ReadAllText(profilePath))!.AsObject();
+            var profile = BambuJson.Parse(File.ReadAllText(profilePath))!.AsObject();
             entry.VendorGroup = profile["filament_vendor"]?.AsArray().FirstOrDefault()?.GetValue<string>() ?? "";
             entry.MaterialFamily = profile["filament_type"]?.AsArray().FirstOrDefault()?.GetValue<string>() ?? "";
             entry.CompatiblePrinters = profile["compatible_printers"]?.AsArray()
@@ -233,7 +233,7 @@ public sealed class BambuLibraryScanner
             var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             while (true)
             {
-                var profile = JsonNode.Parse(File.ReadAllText(currentPath))!.AsObject();
+                var profile = BambuJson.Parse(File.ReadAllText(currentPath))!.AsObject();
                 var inherits = profile["inherits"]?.GetValue<string>();
                 if (string.IsNullOrWhiteSpace(inherits) || !visited.Add(inherits))
                 {
@@ -248,7 +248,7 @@ public sealed class BambuLibraryScanner
                     return;
                 }
 
-                var inherited = JsonNode.Parse(File.ReadAllText(inheritedPath))!.AsObject();
+                var inherited = BambuJson.Parse(File.ReadAllText(inheritedPath))!.AsObject();
                 if (string.IsNullOrWhiteSpace(entry.VendorGroup))
                 {
                     entry.VendorGroup = inherited["filament_vendor"]?.AsArray().FirstOrDefault()?.GetValue<string>() ?? "";
