@@ -49,6 +49,7 @@ public partial class WorkspaceWindow : Window
             && (CategoryFilter.SelectedItem is not string category || category == "All settings" || item.Category == category)
             && (string.IsNullOrWhiteSpace(SettingSearch.Text) || (item.Key + " " + item.DisplayName).Contains(SettingSearch.Text.Trim(), StringComparison.OrdinalIgnoreCase));
         PrinterChoices.ItemsSource = _printers;
+        AdvancedPrinters.ItemsSource = _printers;
         SettingsGrid.ItemsSource = _settingsView;
         DarkCheck.IsChecked = ThemeService.IsDark;
         Loaded += async (_, _) =>
@@ -157,7 +158,8 @@ public partial class WorkspaceWindow : Window
             LoadBackups();
             CatalogCount.Text = $"{_products.Count} filaments · {data.packages.Count} downloaded libraries";
             EmptyLibraryPanel.Visibility = _products.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            WorkspacePath.Text = "Workspace: " + _workspace.Root + Environment.NewLine + "Active library: " + _workspace.Paths.RoamingProfileRoot;
+            WorkspacePath.Text = "Workspace: " + _workspace.Root + Environment.NewLine + "Active library: " + _workspace.Paths.RoamingProfileRoot
+                + Environment.NewLine + "Custom library: " + _workspace.Paths.ActiveUserFilamentFolder + Environment.NewLine + "Installed catalog: " + _workspace.Paths.ProgramProfileRoot;
         }
         finally { _suppress = false; }
         _ready = true;
@@ -186,11 +188,17 @@ public partial class WorkspaceWindow : Window
         InstallButton.Content = UseCustomCheck.IsChecked == true ? "Install into Custom Library" : "Install into System Library";
         SaveButton.IsEnabled = canWrite && _editing is not null && _settings.Any(s => s.IsModified);
         RemoveButton.IsEnabled = ResetOverrideButton.IsEnabled = canWrite && _editing is not null;
+        var deletion = FilamentTree.DeletionProfiles(LibraryTree.SelectedItem as FilamentTreeNode);
+        DeleteSelectionButton.IsEnabled = canWrite && deletion.Count > 0;
+        DeleteSelectionHint.Text = deletion.Count == 0 ? "Select a filament, type, or brand to delete."
+            : $"{deletion.Count} profile(s) in this selection · {(deletion[0].StorageKind == FilamentStorageKind.UserPreset ? "Custom Library" : "System Library")}";
+        if (deletion.Count > 0 && _workspace.IsLive && studio) DeleteSelectionHint.Text += "\nClose Bambu Studio to enable deletion.";
         CheckUpdatesButton.IsEnabled = !_busy && !_checkingUpdates;
+        UpdateToolControls(canWrite);
         UpdateAppButton.IsEnabled = !_busy && !_workspace.IsPreview;
         EditStatus.Text = _editing is null ? "Choose a profile to view settings." : $"{_settings.Count(s => s.IsModified)} unsaved changes · {_settings.Count} settings";
     }
-    private void Selection_Changed(object? sender, PropertyChangedEventArgs e) { if (_suppress) return; _plan = null; UpdateControls(); }
+    private void Selection_Changed(object? sender, PropertyChangedEventArgs e) { if (_suppress) return; _plan = null; InvalidateAdvancedPlan(); UpdateControls(); }
     private void ImportOption_Changed(object sender, RoutedEventArgs e) { _plan = null; UpdateControls(); }
     private void RefreshProductTree()
     {
@@ -205,6 +213,7 @@ public partial class WorkspaceWindow : Window
         var nodes = FilamentTree.Library(_library, LibrarySearch.Text);
         if (string.IsNullOrWhiteSpace(LibrarySearch.Text)) FilamentTree.PreserveExpansion(_libraryNodes, nodes);
         _libraryNodes = nodes; LibraryTree.ItemsSource = nodes;
+        UpdateControls();
     }
     private void ProductFilter_Changed(object sender, RoutedEventArgs e) => RefreshProductTree();
     private void LibraryFilter_Changed(object sender, TextChangedEventArgs e) => RefreshLibraryTree();
@@ -229,7 +238,7 @@ public partial class WorkspaceWindow : Window
         await RunAsync("Reading package…", async () =>
         {
             var package = await Task.Run(() => PackageReader.Load(dialog.FileName));
-            if (!package.Manifest.PrinterNeutral) throw new InvalidDataException("Use a printer-neutral manufacturer package with this workspace.");
+            if (!package.Manifest.PrinterNeutral) { LoadAdvancedPackage(package); return; }
             var target = Path.Combine(_workspace.LibraryFolder, Path.GetFileName(dialog.FileName));
             if (!Path.GetFullPath(target).Equals(Path.GetFullPath(dialog.FileName), StringComparison.OrdinalIgnoreCase))
             {
@@ -295,21 +304,22 @@ public partial class WorkspaceWindow : Window
     private void LibrarySelection_Changed(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         if (_suppress) return;
-        if (e.NewValue is not FilamentTreeNode node || node.LibraryProduct is null) return;
+        if (e.NewValue is not FilamentTreeNode node) { UpdateControls(); return; }
         if (!CanLeaveEditor())
         {
             _suppress = true; node.IsTreeSelected = false;
             if (_chosenNode is not null) _chosenNode.IsTreeSelected = true;
             _suppress = false; return;
         }
+        _suppress = true;
+        ClearEditor();
         _chosenNode = node;
         _chosenProduct = node.LibraryProduct;
-        _suppress = true;
-        _editing = null; _settings.Clear();
-        EditorTitle.Text = _chosenProduct.Name;
-        ProfilePicker.ItemsSource = _chosenProduct.Profiles.OrderBy(p => p.IsBaseProfile).ThenBy(p => p.Name).Select(p => new ProfileOption(p)).ToList();
+        EditorTitle.Text = _chosenProduct?.Name ?? node.Name;
+        ProfilePicker.ItemsSource = _chosenProduct?.Profiles.OrderBy(p => p.IsBaseProfile).ThenBy(p => p.Name).Select(p => new ProfileOption(p)).ToList();
         ProfilePicker.SelectedIndex = -1;
-        ScopeText.Text = _chosenProduct.StorageLabel + ". Choose the printer profile explicitly. Shared bases affect all inheriting profiles.";
+        ScopeText.Text = _chosenProduct is null ? "Select a filament to edit its settings. Use Delete selected to remove the selected brand or type."
+            : _chosenProduct.StorageLabel + ". Choose the printer profile explicitly. Shared bases affect all inheriting profiles.";
         _suppress = false; UpdateControls();
     }
     private void ProfileSelection_Changed(object sender, SelectionChangedEventArgs e)
@@ -326,6 +336,8 @@ public partial class WorkspaceWindow : Window
     private void LoadEditor(CurrentFilamentEntry profile)
     {
         _editing = profile; _settings.Clear();
+        AdvancedProfileName.Text = profile.Name;
+        AdvancedProfileBrand.Text = profile.VendorGroup;
         var service = new FilamentSettingsService(_workspace.Paths);
         foreach (var setting in service.Load(profile))
         {
@@ -335,7 +347,7 @@ public partial class WorkspaceWindow : Window
         _editHash = FileHash(profile.ProfilePath);
         CategoryFilter.ItemsSource = new[] { "All settings" }.Concat(_settings.Select(s => s.Category).Distinct()).ToList();
         CategoryFilter.SelectedIndex = 0;
-        ScopeText.Text = (profile.StorageKind == FilamentStorageKind.UserPreset ? "Custom Library" : "Bambu System Library · Studio updates may replace these changes") + "\n" +
+        ScopeText.Text = (profile.StorageKind == FilamentStorageKind.UserPreset ? "Custom Library" : "Bambu System Library") + "\n" +
             (profile.IsBaseProfile ? "SHARED BASE: changes are inherited by dependent printer profiles."
             : profile.Name + "\nCompatible: " + string.Join(", ", profile.CompatiblePrinters));
         UpdateControls();
@@ -389,12 +401,32 @@ public partial class WorkspaceWindow : Window
     {
         if (_editing is null || !CanLeaveEditor()) return;
         var profile = _editing;
-        if (MessageBox.Show(this, $"Remove this one profile from {(_workspace.IsLive ? "your live Studio library" : "the test copy")}?\n\n{profile.Name}\n\nA backup will be created. Profiles with dependent children cannot be removed alone.", "Remove profile", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        var library = profile.StorageKind == FilamentStorageKind.UserPreset ? "Custom Library" : "Bambu System Library";
+        if (MessageBox.Show(this, $"Delete this one profile from {library}?\n\n{profile.Name}\n\nA backup will be created. Profiles with dependent children cannot be removed alone.", "Delete profile", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         await RunAsync("Backing up and removing profile…", async () =>
         {
             CheckEditCurrent();
             await Task.Run(() => LibraryTransaction.Run(_workspace, "remove", () => new BambuLibraryEditor(_workspace.Paths).Remove(profile)));
             await ReloadAsync(); Log("Profile removed; catalog validation passed.");
+        });
+    }
+    private async void DeleteSelection_Click(object sender, RoutedEventArgs e)
+    {
+        var node = LibraryTree.SelectedItem as FilamentTreeNode;
+        var profiles = FilamentTree.DeletionProfiles(node);
+        if (node is null || profiles.Count == 0 || !CanLeaveEditor()) return;
+        await RunAsync("Reviewing deletion…", async () =>
+        {
+            _workspace.EnsureWritable();
+            var plan = new LibraryRemovalPlan(_workspace.Paths, profiles);
+            var library = profiles[0].StorageKind == FilamentStorageKind.UserPreset ? "Custom Library" : "Bambu System Library";
+            var names = string.Join("\n", profiles.Take(8).Select(p => "• " + p.Name));
+            if (profiles.Count > 8) names += $"\n…and {profiles.Count - 8} more profiles in this selection.";
+            if (MessageBox.Show(this, $"Delete {node.Name} from {library}?\n\n{profiles.Count} profile(s) in the currently shown selection:\n{names}\n\nThis deletes their profile files and library registrations. The other library is unchanged. A recovery backup will be created first.",
+                "Delete library selection", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            var count = await Task.Run(() => plan.Apply(_workspace));
+            await ReloadAsync();
+            Log($"Deleted {count} profile(s) from {library}. A backup is available in Maintenance.");
         });
     }
     private void LoadBackups() => BackupList.ItemsSource = Directory.EnumerateFiles(_workspace.BackupFolder, "*.bflbackup")
@@ -474,7 +506,7 @@ public partial class WorkspaceWindow : Window
         _suppress = true;
         try { foreach (var product in _products)
         {
-            var exists = _current.Any(p => p.CanEdit && p.ProductName.Equals(product.Name, StringComparison.OrdinalIgnoreCase));
+            var exists = _current.Any(p => p.ProductName.Equals(product.Name, StringComparison.OrdinalIgnoreCase));
             var profile = new FilamentProfileEntry { Name = product.ProfileName };
             product.IsSelected = exists && targets.Any(t => !PrinterProfileExpander.IsTargetCovered(profile, t, _current,
                 UseCustomCheck.IsChecked == true ? ImportDestination.ProjectLibrary : ImportDestination.DeviceAms));
@@ -482,6 +514,7 @@ public partial class WorkspaceWindow : Window
         } }
         finally { _suppress = false; _plan = null; UpdateControls(); }
         Navigation.SelectedIndex = 0; Back_Click(this, new RoutedEventArgs());
+        AdvancedImportPanel.Visibility = Visibility.Collapsed;
         ProductSearch.Clear(); VendorFilter.SelectedIndex = 0;
         Log($"Selected {count} existing products with missing target-printer coverage. Review before repairing.");
     }
@@ -577,16 +610,6 @@ public partial class WorkspaceWindow : Window
             Log("Diagnostic report created locally. Review it before attaching it to your issue; nothing was uploaded.");
         }
         catch (Exception ex) { Log(ex.Message); MessageBox.Show(this, ex.Message, "Report a problem"); }
-    }
-    private async void AdvancedTools_Click(object sender, RoutedEventArgs e)
-    {
-        if (!_workspace.IsLive) { MessageBox.Show(this, "Advanced tools operate on the live library. The separate development preview does not offer advanced live tools."); return; }
-        if (!CanLeaveEditor()) return;
-        try { _workspace.EnsureWritable(); }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Advanced tools"); return; }
-        var window = new MainWindow { StartupUpdateChecksEnabled = false, Owner = this };
-        window.ShowDialog();
-        await RunAsync("Refreshing library…", ReloadAsync);
     }
 
 }

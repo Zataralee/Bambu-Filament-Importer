@@ -1,6 +1,6 @@
 # Bambu Filament Importer
 
-**Version 0.6.1 | By Zataralee**
+**Version 0.6.2 | By Zataralee**
 
 <p align="center"><img src="BFI%20Icon.png" width="240" alt="Bambu Filament Importer by Zataralee"></p>
 
@@ -54,7 +54,7 @@ Official source references and catalog policy are documented in [catalogs/README
 - Searches across downloaded manufacturers and reviews a combined selection before installation.
 - Organizes both filament lists as expandable brand → type → filament groups. My Library separates Custom Library and Bambu System Library, with a printer-profile choice before editing.
 - Displays and edits direct and inherited temperatures, cooling, drying, flow, retraction, and calibration values.
-- Removes individual profiles from My Library; advanced rename and bulk removal tools are available in Maintenance.
+- Deletes individual profiles, whole filaments, types, or brands directly from My Library; advanced library editing stays in that tab.
 - Detects duplicates and preserves existing compatible Bambu presets.
 - Selects or deselects every filament in a loaded package with one command.
 - Audits and repairs AMS filament IDs that are too long or collide after printer synchronization.
@@ -62,7 +62,7 @@ Official source references and catalog policy are documented in [catalogs/README
 - Creates safety backups before changing Bambu Studio files.
 - Validates the complete catalog before and after installation and rolls back a failed write automatically.
 - Monitors Bambu Studio continuously, pauses live writes while it is open, and refreshes local records when it closes (without discarding unsaved edits).
-- Offers the existing catalog-drift repair tools through Maintenance → Advanced library tools.
+- Offers AMS-ID repair and catalog-drift repair through My Library → Advanced library tools.
 - Checks for BFI and filament-library updates at startup without installing either automatically.
 - Presents a selectable manufacturer catalog so users download only the libraries they want.
 - Notifies existing users only about updates to installed libraries and separately announces newly published libraries.
@@ -88,7 +88,9 @@ The **Report Bug** action creates a local ZIP containing the user's report, a ve
 6. Choose printers and nozzles. System presets are the default. Check **Import into custom presets instead** to use the user library; hover over the option for the tradeoff.
 7. Select **Review changes**, then **Install into System Library** (or Custom Library if selected). BFI creates a backup first.
 
-Use **My Library** to expand Custom Library or Bambu System Library, then brand, type, and filament. Choose its exact printer profile before editing. Both libraries remain editable. **Maintenance** contains backups, health checks, and advanced tools.
+Use **My Library** to expand Custom Library or Bambu System Library, then brand, type, and filament. Choose its exact printer profile before editing. Both libraries remain editable. Use **Delete selected…** below the library tree for a filament, type, or brand, or choose **Delete this profile…** beside the profile selector. Confirmation identifies the library and profiles, and BFI saves a backup first.
+
+**My Library → Advanced library tools** opens in the same window: rename profiles, change brands, delete groups or installed copies, repair AMS IDs, and find missing catalog profiles. **Add Filaments → Advanced import** handles package name/vendor edits, duplicate selection, legacy packages, explicit destinations, and Program Files mirroring. Administrator operations have separate buttons. **Maintenance** contains backups, Studio-update recovery, and diagnostics. The full feature mapping is in [the workspace feature audit](docs/WORKSPACE_FEATURE_AUDIT.md).
 
 Optional custom imports have independent settings and distinct `(Custom)` profile names to avoid system-preset collisions. Studio displays them together under Custom. Existing profiles are not automatically moved or deleted.
 
@@ -98,7 +100,7 @@ BFI also detects the installed Bambu Studio executable version. With Studio clos
 
 Automatic update recovery merges imported profiles into the current catalog, preserving bundled Bambu profiles, custom presets, unrelated settings, and filament-slot order. Full configuration snapshots are retained locally for manual recovery rather than replacing the new Studio configuration wholesale. Recovery files live under `%LOCALAPPDATA%\BambuFilamentImporter\Workspace\Backups\StudioRecovery`. Protection starts once this version of BFI has saved a recovery point; it cannot reconstruct changes lost before that first backup. An unrecognized installation/version leaves existing backups intact and reports the limitation in Maintenance.
 
-Existing users can install v0.6.1 from the update notice in their current BFI. The updater keeps the managed package library, notification history, theme preference, and Studio profiles.
+Existing users can install v0.6.2 from the update notice in their current BFI. The updater keeps the managed package library, notification history, theme preference, and Studio profiles.
 
 Use **Report a problem** in the header to create a sanitized diagnostic package when reporting a problem. Paste the copied report into the GitHub page and drag the selected ZIP onto the issue.
 
@@ -126,7 +128,7 @@ use under [CC0 1.0 Universal](LIBRARY_LICENSE.md). Anyone may create, modify,
 redistribute, or sell compatible library packages. Filament manufacturers are
 especially encouraged to publish and maintain packages for their own materials.
 
-AMS filament IDs are limited to eight characters and must be unique. The importer normalizes package IDs during installation and can repair older installed libraries through **Maintenance → Advanced library tools**.
+AMS filament IDs are limited to eight characters and must be unique. The importer normalizes package IDs during installation and can repair older installed libraries through **My Library → Advanced library tools**.
 
 ## Building
 

@@ -7,6 +7,8 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        if (args.Length == 2 && args[0].Equals("--elevated-mirror-package", StringComparison.OrdinalIgnoreCase))
+            return PackageElevationService.Execute(args[1]);
         AppLog.Initialize();
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
         {

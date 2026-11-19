@@ -22,6 +22,8 @@ public sealed class BambuLibraryEditor
         {
             throw new InvalidOperationException("Name cannot be blank.");
         }
+        if (newName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || newName is "." or "..")
+            throw new InvalidOperationException("Profile names cannot contain filename separators or reserved characters.");
 
         if (!File.Exists(entry.ProfilePath))
         {
@@ -30,7 +32,7 @@ public sealed class BambuLibraryEditor
 
         if (entry.StorageKind == FilamentStorageKind.UserPreset)
         {
-            SaveUserPreset(entry, newName);
+            SaveUserPreset(entry, newName, newVendorGroup);
             return;
         }
 
@@ -122,10 +124,10 @@ public sealed class BambuLibraryEditor
         var oldName = entry.Name;
         FileBackup.Create(entry.ProfilePath, "bflib-edit-backup");
         UpdateProfileFile(entry.ProfileRoot, entry.ProfilePath, oldName, newName, newVendorGroup);
-        if (entry.IsBaseProfile)
-        {
-            UpdateChildrenInherits(entry.ProfileRoot, entry.ProfilePath, oldName, newName);
-        }
+        UpdateChildrenInherits(entry.ProfileRoot, entry.ProfilePath, oldName, newName);
+        if (Directory.Exists(_paths.UserRoot))
+            foreach (var account in Directory.EnumerateDirectories(_paths.UserRoot))
+                UpdateUserParents(Path.Combine(account, "filament"), oldName, newName);
 
         var newRelativePath = RenameProfileFile(entry, newName);
         UpdateManifest(entry.ProfileRoot, oldName, newName, entry.RelativePath, newRelativePath);
@@ -138,7 +140,7 @@ public sealed class BambuLibraryEditor
         entry.ProfilePath = Path.Combine(entry.ProfileRoot, "BBL", newRelativePath.Replace('/', Path.DirectorySeparatorChar));
     }
 
-    private void SaveUserPreset(CurrentFilamentEntry entry, string newName)
+    private void SaveUserPreset(CurrentFilamentEntry entry, string newName, string newVendorGroup)
     {
         var oldName = entry.Name;
         var oldPath = entry.ProfilePath;
@@ -151,6 +153,7 @@ public sealed class BambuLibraryEditor
         FileBackup.Create(oldPath, "bflib-edit-backup");
         var profile = BambuJson.Parse(File.ReadAllText(oldPath))!.AsObject();
         profile["name"] = newName;
+        if (!string.IsNullOrWhiteSpace(newVendorGroup)) profile["filament_vendor"] = new JsonArray(newVendorGroup);
         if (profile["filament_settings_id"] is JsonArray settingsIds)
         {
             for (var i = 0; i < settingsIds.Count; i++)
@@ -177,11 +180,42 @@ public sealed class BambuLibraryEditor
         }
 
         UpdateProjectConfig(oldName, newName);
+        var account = Path.GetRelativePath(_paths.UserRoot, oldPath).Split(Path.DirectorySeparatorChar)[0];
+        UpdateUserParents(Path.Combine(_paths.UserRoot, account, "filament"), oldName, newName);
         entry.Name = newName;
         entry.OriginalName = newName;
         entry.RelativePath = Path.GetFileName(newPath);
         entry.ProfilePath = newPath;
         entry.InfoPath = newInfoPath;
+        entry.VendorGroup = newVendorGroup;
+    }
+
+    public int SetManufacturer(IEnumerable<CurrentFilamentEntry> entries, string manufacturer)
+    {
+        if (string.IsNullOrWhiteSpace(manufacturer)) throw new InvalidOperationException("Enter a manufacturer name.");
+        var profiles = entries.DistinctBy(e => e.ProfilePath, StringComparer.OrdinalIgnoreCase).ToList();
+        foreach (var entry in profiles)
+        {
+            EnsureEditable(entry);
+            var json = BambuJson.Parse(File.ReadAllText(entry.ProfilePath))!.AsObject();
+            FileBackup.Create(entry.ProfilePath, "bflib-edit-backup");
+            json["filament_vendor"] = new JsonArray(manufacturer.Trim());
+            File.WriteAllText(entry.ProfilePath, json.ToJsonString(WriteOptions));
+        }
+        return profiles.Count;
+    }
+
+    private static void UpdateUserParents(string root, string oldName, string newName)
+    {
+        if (oldName == newName || !Directory.Exists(root)) return;
+        foreach (var path in Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories))
+        {
+            var json = BambuJson.Parse(File.ReadAllText(path))!.AsObject();
+            if (json["inherits"]?.GetValue<string>() != oldName) continue;
+            FileBackup.Create(path, "bflib-edit-backup");
+            json["inherits"] = newName;
+            File.WriteAllText(path, json.ToJsonString(WriteOptions));
+        }
     }
 
     private static void UpdateProfileFile(string profileRoot, string profilePath, string oldName, string newName, string newVendorGroup)
@@ -189,13 +223,9 @@ public sealed class BambuLibraryEditor
         var node = BambuJson.Parse(File.ReadAllText(profilePath))!.AsObject();
         node["name"] = newName;
 
-        if (!string.IsNullOrWhiteSpace(newVendorGroup) && newName.EndsWith("@base", StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(newVendorGroup))
         {
             node["filament_vendor"] = new JsonArray(newVendorGroup);
-        }
-        else if (!string.IsNullOrWhiteSpace(newVendorGroup))
-        {
-            UpdateInheritedBaseVendor(profileRoot, profilePath, node, newVendorGroup);
         }
 
         var inherits = node["inherits"]?.GetValue<string>();
@@ -343,13 +373,8 @@ public sealed class BambuLibraryEditor
         }
 
         var config = LoadConfig();
-        var filaments = config["filaments"]?.AsArray();
-        if (filaments is null)
-        {
-            return;
-        }
-
         var changed = false;
+        foreach (var filaments in new[] { config["filaments"] as JsonArray, config["presets"]?["filaments"] as JsonArray }.OfType<JsonArray>())
         for (var i = 0; i < filaments.Count; i++)
         {
             if (string.Equals(filaments[i]?.GetValue<string>(), oldName, StringComparison.OrdinalIgnoreCase))
@@ -357,6 +382,12 @@ public sealed class BambuLibraryEditor
                 filaments[i] = newName;
                 changed = true;
             }
+        }
+        if (config["app"] is JsonObject app && app["ams_recent_filament_presets"] is JsonValue recent)
+        {
+            var original = recent.GetValue<string>();
+            var updated = string.Join('\n', original.Split('\n').Select(n => n.Trim().Equals(oldName, StringComparison.OrdinalIgnoreCase) ? newName : n));
+            if (updated != original) { app["ams_recent_filament_presets"] = updated; changed = true; }
         }
 
         if (changed)
@@ -376,6 +407,16 @@ public sealed class BambuLibraryEditor
         var config = LoadConfig();
         var changed = RemoveNames(config["filaments"]?.AsArray(), names);
         changed |= RemoveNames(config["presets"]?["filaments"]?.AsArray(), names);
+        if (config["app"] is JsonObject app && app["ams_recent_filament_presets"] is JsonValue recentValue)
+        {
+            var recent = recentValue.GetValue<string>();
+            var retained = recent.Split('\n').Where(n => !names.Contains(n.Trim())).ToList();
+            if (retained.Count != recent.Split('\n').Length)
+            {
+                app["ams_recent_filament_presets"] = string.Join('\n', retained);
+                changed = true;
+            }
+        }
         if (changed)
         {
             FileBackup.Create(_paths.ConfigPath, "bflib-remove-backup");
@@ -414,7 +455,7 @@ public sealed class BambuLibraryEditor
     private void SaveConfig(JsonObject config) =>
         File.WriteAllText(_paths.ConfigPath, config.ToJsonString(WriteOptions) + Environment.NewLine);
 
-    private static void EnsureDependenciesAreIncluded(List<CurrentFilamentEntry> entries)
+    private void EnsureDependenciesAreIncluded(List<CurrentFilamentEntry> entries)
     {
         foreach (var rootGroup in entries
             .Where(entry => entry.StorageKind == FilamentStorageKind.SystemCatalog)
@@ -444,6 +485,26 @@ public sealed class BambuLibraryEditor
                     continue;
                 }
             }
+        }
+        // User roots and system presets can both have user-preset dependents.
+        if (!Directory.Exists(_paths.UserRoot)) return;
+        var allSelectedPaths = entries.Select(e => e.ProfilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var systemNames = entries.Where(e => e.StorageKind == FilamentStorageKind.SystemCatalog)
+            .Select(e => e.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        string Account(string path) => Path.GetRelativePath(_paths.UserRoot, path).Split(Path.DirectorySeparatorChar)[0];
+        foreach (var path in Directory.EnumerateFiles(_paths.UserRoot, "*.json", SearchOption.AllDirectories))
+        {
+            if (allSelectedPaths.Contains(path)) continue;
+            var relative = Path.GetRelativePath(_paths.UserRoot, path).Split(Path.DirectorySeparatorChar);
+            if (relative.Length < 3 || !relative[1].Equals("filament", StringComparison.OrdinalIgnoreCase)) continue;
+            try
+            {
+                var parent = BambuJson.Parse(File.ReadAllText(path))?["inherits"]?.GetValue<string>() ?? "";
+                if (systemNames.Contains(parent) || entries.Any(e => e.StorageKind == FilamentStorageKind.UserPreset
+                    && e.Name.Equals(parent, StringComparison.OrdinalIgnoreCase) && Account(e.ProfilePath).Equals(Account(path), StringComparison.OrdinalIgnoreCase)))
+                    throw new InvalidOperationException($"The selection is still used by custom preset {Path.GetFileNameWithoutExtension(path)}. Remove its dependent profile first, or include it in the selection.");
+            }
+            catch (JsonException) { continue; }
         }
     }
 

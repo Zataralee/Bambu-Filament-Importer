@@ -83,6 +83,7 @@ internal static class Program
    Check(File.Exists(user.ProfilePath),"backup restoration");
    CustomLibraryTests.Run(workspace, [overture,sunlu], printer);
    StudioRecoveryTests.Run(workspace);
+   LibraryToolsTests.Run(workspace, repo);
    BambuCatalogIntegrity.ValidateProfileRoot(paths.RoamingProfileRoot);
    Check(liveBefore==WorkspaceContext.Fingerprint(new BambuPaths()),"live library unchanged throughout write tests");
    Render(repo,workspace);
@@ -134,6 +135,7 @@ internal static class Program
    var image=new RenderTargetBitmap((int)window.ActualWidth,(int)window.ActualHeight,96,96,PixelFormats.Pbgra32);image.Render(window);
    var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(image));
    using(var stream=File.Create(Path.Combine(folder,dark?"preview-dark.png":"preview-light.png")))png.Save(stream);
+   ToolLayoutTests.Run(window, workspace, repo, folder, dark);
    window.Width=1020;window.Height=720;
    ((TextBlock)window.FindName("AppUpdateText")).Text="BFI 0.7.0 is available. Your libraries and settings are kept when updating.";
    ((TextBlock)window.FindName("LibraryUpdateText")).Text="2 downloaded filament library updates available · 1 new filament library available";

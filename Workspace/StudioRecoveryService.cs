@@ -41,7 +41,7 @@ public sealed class StudioRecoveryService
             ? new StudioRecoveryOffer(state, version) : null;
     }
 
-    public bool Capture(bool explicitChange = false, bool acceptVersionChange = false)
+    public bool Capture(bool explicitChange = false, bool acceptVersionChange = false, IEnumerable<string>? importedNames = null)
     {
         var version = _version();
         if (version is null) return false; // Never replace a known version with an unknown value.
@@ -55,8 +55,9 @@ public sealed class StudioRecoveryService
         var stockNames = BambuJson.Parse(File.ReadAllText(stockManifest))!["filament_list"]!.AsArray()
             .Select(n => n!["name"]!.GetValue<string>()).ToHashSet(StringComparer.OrdinalIgnoreCase);
         // Include legacy imports as well as new BFI imports, without rolling back bundled presets.
+        var knownImports = (previous?.ProfileNames ?? []).Concat(importedNames ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var profiles = new BambuLibraryScanner(paths).LoadCurrentFilaments()
-            .Where(p => p.StorageKind == FilamentStorageKind.SystemCatalog && p.CanEdit && !stockNames.Contains(p.Name))
+            .Where(p => p.StorageKind == FilamentStorageKind.SystemCatalog && p.CanEdit && (!stockNames.Contains(p.Name) || knownImports.Contains(p.Name)))
             .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase).ToList();
         var names = profiles.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (!explicitChange && previous is not null && previous.ProfileNames.Any(n => !names.Contains(n))) return false;

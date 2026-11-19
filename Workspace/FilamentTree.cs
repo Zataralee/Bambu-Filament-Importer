@@ -44,8 +44,10 @@ public static class FilamentTree
     public static List<LibraryProduct> Products(IEnumerable<CurrentFilamentEntry> profiles, IEnumerable<string>? knownBrands = null)
     {
         var brands = (knownBrands ?? []).Distinct(StringComparer.OrdinalIgnoreCase).OrderByDescending(b => b.Length).ToList();
+        var materialGroups = new HashSet<string>(["PLA", "PETG", "ABS", "ASA", "TPU", "PA", "PC", "PVA", "PET", "PPS", "PPA", "HIPS"], StringComparer.OrdinalIgnoreCase);
         string CanonicalBrand(CurrentFilamentEntry p) => brands.FirstOrDefault(b => p.VendorGroup.Equals(b, StringComparison.OrdinalIgnoreCase)
-            || p.VendorGroup.StartsWith(b + " ", StringComparison.OrdinalIgnoreCase)) ?? NormalizeBrand(p.VendorGroup, p.MaterialFamily);
+            || (p.VendorGroup.StartsWith(b + " ", StringComparison.OrdinalIgnoreCase) && materialGroups.Contains(p.VendorGroup[(b.Length + 1)..])))
+            ?? NormalizeBrand(p.VendorGroup, p.MaterialFamily);
         return profiles
         .Where(p => p.CanEdit && !p.Name.StartsWith("fdm_", StringComparison.OrdinalIgnoreCase))
         .GroupBy(p => string.Join("|", p.StorageKind, CanonicalBrand(p), Material(p.MaterialFamily), p.ProductName), StringComparer.OrdinalIgnoreCase)
@@ -71,6 +73,14 @@ public static class FilamentTree
             yield return node;
             foreach (var child in Flatten(node.Children)) yield return child;
         }
+    }
+    public static List<CurrentFilamentEntry> DeletionProfiles(FilamentTreeNode? node)
+    {
+        // Library headings are navigation, not a delete-all action.
+        if (node is null || (node.LibraryProduct is null && node.Key.Split('/').Length < 3)) return [];
+        return Flatten([node]).Where(n => n.LibraryProduct is not null)
+            .SelectMany(n => n.LibraryProduct!.Profiles).Where(p => p.CanEdit)
+            .DistinctBy(p => p.ProfilePath, StringComparer.OrdinalIgnoreCase).ToList();
     }
     public static void PreserveExpansion(IEnumerable<FilamentTreeNode> previous, IEnumerable<FilamentTreeNode> next)
     {

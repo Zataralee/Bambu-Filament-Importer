@@ -21,7 +21,7 @@ public static class ElevationService
     {
         if (IsAdministrator())
         {
-            return new BambuLibraryEditor(paths).RemoveMany(entries);
+            return InstalledCatalogTransaction.Run(paths, () => new BambuLibraryEditor(paths).RemoveMany(entries));
         }
 
         var helperFolder = Path.Combine(Path.GetTempPath(), "BambuFilamentImporter");
@@ -91,7 +91,7 @@ public static class ElevationService
             }
 
             var entries = plan.Targets.Select(target => ValidateAndCreateEntry(paths, target)).ToList();
-            var removed = new BambuLibraryEditor(paths).RemoveMany(entries);
+            var removed = InstalledCatalogTransaction.Run(paths, () => new BambuLibraryEditor(paths).RemoveMany(entries));
             WriteResult(plan.ResultPath, new ElevatedRemovalResult { Success = true, RemovedCount = removed, Message = "Removal complete." });
             return 0;
         }
@@ -108,7 +108,7 @@ public static class ElevationService
         var audit = service.Audit();
         if (audit.ProgramFilesAffected == 0 || IsAdministrator())
         {
-            return service.Repair();
+            return InstalledCatalogTransaction.Run(paths, service.Repair);
         }
 
         var helperFolder = Path.Combine(Path.GetTempPath(), "BambuFilamentImporter");
@@ -165,7 +165,8 @@ public static class ElevationService
                 throw new InvalidOperationException("Bambu Studio opened before AMS ID repair completed. Close it and try again.");
             }
 
-            var result = new AmsFilamentIdRepairService(new BambuPaths()).Repair();
+            var paths = new BambuPaths();
+            var result = InstalledCatalogTransaction.Run(paths, () => new AmsFilamentIdRepairService(paths).Repair());
             WriteResult(resultPath, new ElevatedAmsRepairResult
             {
                 Success = true,

@@ -59,7 +59,7 @@ public sealed class ImportPlan
             hashes[group.Key] = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(group.Key)));
             var package = PackageReader.Load(group.Key);
             if (!package.Manifest.PrinterNeutral)
-                throw new InvalidOperationException("Add filaments accepts printer-neutral manufacturer packages. Import older packages through Maintenance → Advanced library tools.");
+                throw new InvalidOperationException("Use Add Filaments → Advanced import for older printer-specific packages.");
             foreach (var p in package.Manifest.Profiles)
             {
                 p.IsSelected = group.Any(c => c.ProfileName.Equals(p.Name, StringComparison.OrdinalIgnoreCase));

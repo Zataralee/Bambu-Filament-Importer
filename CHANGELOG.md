@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.2 - 2026-11-18
+
+- Restored direct deletion for filaments, types, and brands in both libraries, without first selecting a printer profile. Individual-profile deletion sits beside the profile selector.
+- Audited all old-interface actions and moved advanced library editing into My Library, and package editing/import tools into Add Filaments. Both open in place; the old-window launcher is removed.
+- Added inline profile/brand renaming, legacy imports, duplicate selection, AMS-ID repair, catalog-repair review, and separate administrator actions for installed copies and mirroring.
+- Protect user-preset dependencies during deletion and renaming, clean up recent AMS entries, reject stale deletion/import reviews, and roll back failed installed-catalog operations.
+- Fixed profile-selector label rendering and retained Studio-update recovery, backups, and app/library update notices.
+
 ## 0.6.1 - 2026-11-18
 
 - Removed the Test copy / Live Studio selector and test-copy controls from the released workspace.
