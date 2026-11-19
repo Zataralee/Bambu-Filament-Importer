@@ -10,11 +10,13 @@ public sealed class BambuInstaller
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
     private readonly BambuPaths _paths;
     private readonly Func<bool> _isStudioRunning;
+    private readonly FilamentSettingsService _settingsResolver;
 
     public BambuInstaller(BambuPaths paths, Func<bool>? isStudioRunning = null)
     {
         _paths = paths;
         _isStudioRunning = isStudioRunning ?? BambuProcess.IsStudioRunning;
+        _settingsResolver = new FilamentSettingsService(paths);
     }
 
     public InstallResult Install(LoadedFilamentPackage package, ImportDestination destination, bool installProgram)
@@ -455,7 +457,7 @@ public sealed class BambuInstaller
         return node.ToJsonString(WriteOptions) + Environment.NewLine;
     }
 
-    private static string BuildUserProfileJson(
+    private string BuildUserProfileJson(
         LoadedFilamentPackage package,
         FilamentProfileEntry selectedProfile,
         Dictionary<string, FilamentProfileEntry> profilesByOriginalName)
@@ -465,6 +467,11 @@ public sealed class BambuInstaller
         AppendPackageChain(package, selectedProfile, profilesByOriginalName, chain, visited);
 
         var merged = new JsonObject();
+        // Resolve native defaults once into the custom file; do not retain a dependency
+        // on BFI-installed system parents that Studio can replace during an update.
+        var externalParent = chain.FirstOrDefault()?["inherits"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(externalParent))
+            chain.Insert(0, _settingsResolver.ResolveEffectiveJson(externalParent));
         foreach (var profile in chain)
         {
             foreach (var pair in profile)
@@ -479,8 +486,11 @@ public sealed class BambuInstaller
         }
 
         merged["name"] = selectedProfile.Name;
+        if (!string.IsNullOrWhiteSpace(selectedProfile.VendorGroup)) merged["filament_vendor"] = new JsonArray(selectedProfile.VendorGroup);
         merged["from"] = "User";
-        merged["inherits"] = GetGenericParent(selectedProfile.MaterialFamily);
+        merged["inherits"] = "";
+        merged["filament_id"] = chain.Select(AmsFilamentId.Read).LastOrDefault(id => !string.IsNullOrWhiteSpace(id))
+            ?? AmsFilamentId.Assign(null, CurrentFilamentEntry.GetProductName(selectedProfile.Name), new HashSet<string>());
         merged["filament_settings_id"] = new JsonArray(selectedProfile.Name);
         merged["version"] = "2.8.0.0";
         return merged.ToJsonString(WriteOptions) + Environment.NewLine;
@@ -509,11 +519,6 @@ public sealed class BambuInstaller
         chain.Add(json);
     }
 
-    private static string GetGenericParent(string materialFamily)
-    {
-        var family = string.IsNullOrWhiteSpace(materialFamily) ? "PLA" : materialFamily.Trim();
-        return family.StartsWith("Generic ", StringComparison.OrdinalIgnoreCase) ? family : $"Generic {family}";
-    }
 }
 
 public sealed class InstallResult

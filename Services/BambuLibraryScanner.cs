@@ -134,7 +134,7 @@ public sealed class BambuLibraryScanner
             if (File.Exists(profilePath))
             {
                 TryReadProfileDetails(profilePath, entry);
-                if (string.IsNullOrWhiteSpace(entry.VendorGroup))
+                if (string.IsNullOrWhiteSpace(entry.VendorGroup) || string.IsNullOrWhiteSpace(entry.MaterialFamily))
                 {
                     TryReadInheritedDetails(profilePath, entry, pathsByName);
                 }
@@ -152,9 +152,17 @@ public sealed class BambuLibraryScanner
             Path.Combine(_paths.UserRoot, "default", "filament")
         };
 
-        foreach (var folder in folders.Where(Directory.Exists))
+        var userFiles = folders.Where(Directory.Exists)
+            .SelectMany(folder => new[] { folder, Path.Combine(folder, "base") }.Where(Directory.Exists)
+                .SelectMany(dir => Directory.EnumerateFiles(dir, "*.json", SearchOption.TopDirectoryOnly)))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var pathsByName = results.GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().ProfilePath, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in userFiles)
+            pathsByName.TryAdd(Path.GetFileNameWithoutExtension(file), file);
+        foreach (var profilePath in userFiles)
         {
-            foreach (var profilePath in Directory.EnumerateFiles(folder, "*.json", SearchOption.TopDirectoryOnly))
+            var folder = Path.GetDirectoryName(profilePath)!;
             {
                 try
                 {
@@ -169,12 +177,12 @@ public sealed class BambuLibraryScanner
                     {
                         Name = name,
                         OriginalName = name,
-                        VendorGroup = "Custom / User Presets",
+                        VendorGroup = profile["filament_vendor"]?.AsArray().FirstOrDefault()?.GetValue<string>() ?? "",
                         MaterialFamily = profile["filament_type"]?.AsArray().FirstOrDefault()?.GetValue<string>() ?? "",
-                        Source = folder.Equals(_paths.ActiveUserFilamentFolder, StringComparison.OrdinalIgnoreCase)
+                        Source = profilePath.StartsWith(_paths.ActiveUserFilamentFolder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
                             ? "Active user preset library"
                             : "Default user preset library",
-                        Location = "Project Library (user preset)",
+                        Location = "Custom Library (user preset)",
                         RelativePath = Path.GetFileName(profilePath),
                         ProfileRoot = folder,
                         ProfilePath = profilePath,
@@ -188,9 +196,9 @@ public sealed class BambuLibraryScanner
                             .ToList() ?? []
                     };
 
-                    if (string.IsNullOrWhiteSpace(entry.MaterialFamily))
+                    if (string.IsNullOrWhiteSpace(entry.MaterialFamily) || string.IsNullOrWhiteSpace(entry.VendorGroup))
                     {
-                        TryReadInheritedDetails(profilePath, entry);
+                        TryReadInheritedDetails(profilePath, entry, pathsByName);
                     }
 
                     results.Add(entry);

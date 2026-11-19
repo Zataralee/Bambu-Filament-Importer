@@ -77,11 +77,26 @@ public sealed class FilamentSettingsService
 
     public void InvalidateIndex() => _profilePathByName = null;
 
-    private void LoadChain(string path, List<ProfileDocument> chain, HashSet<string> visited)
+    public JsonObject ResolveEffectiveJson(string profileName)
+    {
+        EnsureProfileIndex();
+        if (!_profilePathByName!.TryGetValue(profileName, out var path))
+            throw new InvalidDataException($"Cannot create an independent custom preset: parent '{profileName}' was not found.");
+        var chain = new List<ProfileDocument>();
+        LoadChain(path, chain, new HashSet<string>(StringComparer.OrdinalIgnoreCase), requireParents: true);
+        var result = new JsonObject();
+        foreach (var document in chain)
+        foreach (var pair in document.Json)
+            result[pair.Key] = pair.Value?.DeepClone();
+        return result;
+    }
+
+    private void LoadChain(string path, List<ProfileDocument> chain, HashSet<string> visited, bool requireParents = false)
     {
         var fullPath = Path.GetFullPath(path);
         if (!visited.Add(fullPath) || !File.Exists(fullPath))
         {
+            if (requireParents) throw new InvalidDataException("Missing or cyclic preset inheritance: " + Path.GetFileName(fullPath));
             return;
         }
 
@@ -92,8 +107,9 @@ public sealed class FilamentSettingsService
             var inheritedPath = ResolveInheritedPath(fullPath, inherits);
             if (inheritedPath is not null)
             {
-                LoadChain(inheritedPath, chain, visited);
+                LoadChain(inheritedPath, chain, visited, requireParents);
             }
+            else if (requireParents) throw new InvalidDataException($"Preset parent '{inherits}' was not found.");
         }
 
         chain.Add(new ProfileDocument(

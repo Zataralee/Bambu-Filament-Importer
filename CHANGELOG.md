@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.1 - 2026-11-18
+
+- Removed the Test copy / Live Studio selector and test-copy controls from the released workspace.
+- Added expandable brand → material type → filament trees to Add Filaments and My Library, including search that expands matching groups.
+- Split My Library into Custom Library and Bambu System Library, retaining profile selection and editing in both.
+- Kept system presets as the default import destination for brand grouping. An unchecked custom-presets alternative explains the long-list tradeoff on hover.
+- Added Studio version detection and persistent recovery snapshots of imported system profiles and configuration. After an update, users can restore their saved imports or defer recovery from Maintenance. Restoration preserves new bundled profiles and unrelated settings.
+- Custom presets include their inherited settings and use distinct `(Custom)` profile names, preventing missing-system-parent dependencies and system/user name collisions in Studio.
+- Keep selected navigation tabs and tree entries highlighted consistently when hover or focus changes.
+- Corrected inherited manufacturer/type grouping and added checks for untouched system catalogs, independent custom presets, import rollback and Studio-update recovery, and simulated system-catalog replacement.
+
 ## 0.6.0 - 2026-11-18
 
 - Promoted the tested Compact workspace to the main application, with Add filaments, My library, and Maintenance, plus the original application icon.

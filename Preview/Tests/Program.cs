@@ -25,7 +25,7 @@ internal static class Program
   {
    var name = "fdm_filament_" + family;
    File.WriteAllText(Path.Combine(paths.RoamingProfileRoot, "BBL", "filament", name + ".json"),
-    new JsonObject { ["name"] = name, ["type"] = "filament", ["hot_plate_temp"] = new JsonArray("70") }.ToJsonString());
+    new JsonObject { ["name"] = name, ["type"] = "filament", ["filament_type"] = new JsonArray(family is "pet" or "petg" ? "PETG" : family.ToUpperInvariant()), ["hot_plate_temp"] = new JsonArray("70") }.ToJsonString());
    manifest["filament_list"]!.AsArray().Add(new JsonObject { ["name"] = name, ["sub_path"] = "filament/" + name + ".json" });
   }
   File.WriteAllText(Path.Combine(paths.RoamingProfileRoot, "BBL.json"), manifest.ToJsonString());
@@ -81,6 +81,8 @@ internal static class Program
    Check(!File.Exists(user.ProfilePath),"profile removal");
    LibraryTransaction.Run(workspace,"restore-test",()=>new LibraryBackupService(paths,()=>false).Restore(backup));
    Check(File.Exists(user.ProfilePath),"backup restoration");
+   CustomLibraryTests.Run(workspace, [overture,sunlu], printer);
+   StudioRecoveryTests.Run(workspace);
    BambuCatalogIntegrity.ValidateProfileRoot(paths.RoamingProfileRoot);
    Check(liveBefore==WorkspaceContext.Fingerprint(new BambuPaths()),"live library unchanged throughout write tests");
    Render(repo,workspace);
@@ -106,6 +108,29 @@ internal static class Program
    ThemeService.Apply(dark);
    var window=new WorkspaceWindow(workspace){InitializeOnLoad=false,Width=1280,Height=900};
    window.Show();window.UpdateLayout();
+   Check(window.FindName("TestMode") is null && window.FindName("LiveMode") is null && window.FindName("ResetTestButton") is null,"test/live controls are absent");
+   Check(((CheckBox)window.FindName("UseCustomCheck")).IsChecked != true,"custom library opt-in starts unchecked");
+   var tabs=(TabControl)window.FindName("Navigation");
+   Check(((TabItem)tabs.Items[0]).Header.ToString()=="Add Filaments" && ((TabItem)tabs.Items[1]).Header.ToString()=="My Library","navigation uses requested capitalization");
+   var selectedTab=(TabItem)tabs.Items[0];
+   var selectedBorder=(Border)selectedTab.Template.FindName("TabBorder",selectedTab);
+   var selectionColor=((SolidColorBrush)ThemeService.Brush("SelectionBrush")).Color;
+   ((TextBox)window.FindName("ProductSearch")).Focus();window.UpdateLayout();
+   Check(((SolidColorBrush)selectedBorder.Background).Color==selectionColor,"selected tab retains highlight when focus moves into search");
+   var displayProducts = new List<ProductChoice> {
+    new() { PackagePath="demo-overture",ProfileName="Overture ABS @base",Manufacturer="Overture",Material="ABS",Coverage="System: 2 profiles" },
+    new() { PackagePath="demo-sunlu",ProfileName="SUNLU High Speed Matte PETG @base",Manufacturer="SUNLU",Material="PETG",Coverage="System: 2 profiles" }
+   };
+   var displayTree=FilamentTree.Catalog(displayProducts);
+   foreach(var node in FilamentTree.Flatten(displayTree))node.IsExpanded=true;
+   ((TreeView)window.FindName("ProductsTree")).ItemsSource=displayTree;
+   ((ItemsControl)window.FindName("PrinterChoices")).ItemsSource=new[]{new PrinterChoice(Target("0.4","0.6"))};
+   ((ComboBox)window.FindName("VendorFilter")).ItemsSource=new[]{"All manufacturers"};
+   ((ComboBox)window.FindName("VendorFilter")).SelectedIndex=0;
+   ((TreeView)window.FindName("ProductsTree")).ItemsSource=displayTree;
+   ((TextBlock)window.FindName("BuildLabel")).Text=$"Version {UpdateService.CurrentVersion.ToString(3)} · Compact workspace · By Zataralee";
+   ((TextBlock)window.FindName("StatusText")).Text="Workspace ready.";
+   window.UpdateLayout();
    var image=new RenderTargetBitmap((int)window.ActualWidth,(int)window.ActualHeight,96,96,PixelFormats.Pbgra32);image.Render(window);
    var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(image));
    using(var stream=File.Create(Path.Combine(folder,dark?"preview-dark.png":"preview-light.png")))png.Save(stream);

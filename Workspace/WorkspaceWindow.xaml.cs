@@ -21,12 +21,12 @@ public partial class WorkspaceWindow : Window
     private readonly ObservableCollection<PrinterChoice> _printers = [];
     private readonly ObservableCollection<LibraryProduct> _library = [];
     private readonly ObservableCollection<ProfileSettingEntry> _settings = [];
-    private readonly ICollectionView _productView;
-    private readonly ICollectionView _libraryView;
     private readonly ICollectionView _settingsView;
+    private List<FilamentTreeNode> _productNodes = [], _libraryNodes = [];
+    private FilamentTreeNode? _chosenNode;
     private readonly BambuProcessMonitor _monitor = new();
     private List<CurrentFilamentEntry> _current = [];
-    private ImportPlan? _plan;
+    private ImportSelectionPlan? _plan;
     private CurrentFilamentEntry? _editing;
     private LibraryProduct? _chosenProduct;
     private string _editHash = "";
@@ -34,6 +34,7 @@ public partial class WorkspaceWindow : Window
     private bool _checkingUpdates;
     private UpdateRelease? _availableAppUpdate;
     private LibraryUpdateNotice? _libraryNotice;
+    private string? _deferredRecoveryVersion;
     private int _lastTab;
     public bool InitializeOnLoad { get; set; } = true;
     public bool StartupUpdateChecksEnabled { get; set; } = true;
@@ -43,30 +44,21 @@ public partial class WorkspaceWindow : Window
         InitializeComponent();
         Title = _workspace.IsPreview ? "BFI Redesign Preview · Compact workspace" : $"Bambu Filament Importer {UpdateService.CurrentVersion.ToString(3)} by Zataralee";
         BuildLabel.Text = _workspace.IsPreview ? "Compact workspace · Preview · By Zataralee" : $"Version {UpdateService.CurrentVersion.ToString(3)} · Compact workspace · By Zataralee";
-        LiveMode.IsChecked = _workspace.IsLive;
-        TestMode.IsChecked = !_workspace.IsLive;
-        _productView = CollectionViewSource.GetDefaultView(_products);
-        _productView.Filter = p => p is ProductChoice item
-            && (string.IsNullOrWhiteSpace(ProductSearch.Text) || (item.Name + " " + item.Manufacturer + " " + item.Material).Contains(ProductSearch.Text.Trim(), StringComparison.OrdinalIgnoreCase))
-            && (VendorFilter.SelectedItem is not string vendor || vendor == "All manufacturers" || item.Manufacturer == vendor);
-        _libraryView = CollectionViewSource.GetDefaultView(_library);
-        _libraryView.Filter = p => p is LibraryProduct item && (string.IsNullOrWhiteSpace(LibrarySearch.Text)
-            || (item.Name + " " + item.Summary).Contains(LibrarySearch.Text.Trim(), StringComparison.OrdinalIgnoreCase));
         _settingsView = CollectionViewSource.GetDefaultView(_settings);
         _settingsView.Filter = p => p is ProfileSettingEntry item
             && (CategoryFilter.SelectedItem is not string category || category == "All settings" || item.Category == category)
             && (string.IsNullOrWhiteSpace(SettingSearch.Text) || (item.Key + " " + item.DisplayName).Contains(SettingSearch.Text.Trim(), StringComparison.OrdinalIgnoreCase));
-        ProductsGrid.ItemsSource = _productView;
         PrinterChoices.ItemsSource = _printers;
-        LibraryList.ItemsSource = _libraryView;
         SettingsGrid.ItemsSource = _settingsView;
         DarkCheck.IsChecked = ThemeService.IsDark;
         Loaded += async (_, _) =>
         {
             if (!InitializeOnLoad) return;
-            await RunAsync(_workspace.IsPreview ? "Preparing your separate test library…" : "Loading your filament library…", async () =>
+            await RunAsync("Preparing workspace…", async () => await Task.Run(_workspace.Initialize));
+            // Offer recovery before trying to read a catalog that an update may have damaged.
+            if (!_workspace.IsPreview) await CheckStudioRecoveryAsync(false);
+            await RunAsync("Loading your filament library…", async () =>
             {
-                await Task.Run(_workspace.Initialize);
                 await ReloadAsync();
                 _ready = true;
                 Log("Workspace ready.");
@@ -81,7 +73,10 @@ public partial class WorkspaceWindow : Window
             if (ReviewPanel.Visibility == Visibility.Visible) StatusText.Text = "Studio state changed. Go back and review again before installing.";
             UpdateControls();
             if (!running && !_busy && _ready && !_settings.Any(s => s.IsModified))
+            {
                 await RunAsync("Refreshing Studio records…", ReloadAsync);
+                if (!_workspace.IsPreview) await CheckStudioRecoveryAsync(false);
+            }
         });
         _monitor.Start(BambuProcess.IsStudioRunning());
         UpdateControls();
@@ -92,7 +87,6 @@ public partial class WorkspaceWindow : Window
         _busy = true;
         StatusText.Text = label;
         Navigation.IsEnabled = false;
-        TestMode.IsEnabled = LiveMode.IsEnabled = false;
         BusyProgress.Visibility = Visibility.Visible;
         try { await action(); }
         catch (Exception ex)
@@ -105,7 +99,6 @@ public partial class WorkspaceWindow : Window
         {
             _busy = false;
             Navigation.IsEnabled = true;
-            TestMode.IsEnabled = LiveMode.IsEnabled = true;
             BusyProgress.Visibility = Visibility.Collapsed;
             UpdateControls();
         }
@@ -134,7 +127,9 @@ public partial class WorkspaceWindow : Window
                     Manufacturer = package.Manifest.Manufacturer, Material = profile.MaterialFamily,
                     IsSelected = selected.Contains(package.FilePath + "|" + profile.Name) };
                 var matching = _current.Where(e => e.CanEdit && e.ProductName.Equals(product.Name, StringComparison.OrdinalIgnoreCase) && !e.IsBaseProfile).ToList();
-                product.Coverage = matching.Count == 0 ? "Not in library" : $"In library · {matching.Count} profile{(matching.Count == 1 ? "" : "s")}";
+                var custom = matching.Count(p => p.StorageKind == FilamentStorageKind.UserPreset);
+                var system = matching.Count - custom;
+                product.Coverage = matching.Count == 0 ? "Not installed" : $"Custom: {custom} · System: {system} profiles";
                 product.PropertyChanged += Selection_Changed;
                 _products.Add(product);
             }
@@ -156,9 +151,7 @@ public partial class WorkspaceWindow : Window
                 _printers.Add(choice);
             }
             _library.Clear();
-            foreach (var group in _current.Where(e => e.CanEdit && !e.Name.StartsWith("fdm_", StringComparison.OrdinalIgnoreCase))
-                .GroupBy(e => e.ProductName, StringComparer.OrdinalIgnoreCase).OrderBy(g => g.Key))
-                _library.Add(new LibraryProduct(group.Key, group.ToList()));
+            foreach (var product in FilamentTree.Products(_current, _products.Select(p => p.Manufacturer))) _library.Add(product);
             ClearEditor();
             _plan = null;
             LoadBackups();
@@ -168,6 +161,7 @@ public partial class WorkspaceWindow : Window
         }
         finally { _suppress = false; }
         _ready = true;
+        RefreshProductTree(); RefreshLibraryTree();
         UpdateControls();
     }
     private void Log(string message)
@@ -176,36 +170,44 @@ public partial class WorkspaceWindow : Window
         ActivityLog.AppendText($"[{DateTime.Now:t}] {message}{Environment.NewLine}");
         ActivityLog.ScrollToEnd();
     }
-    private ImportDestination Destination => DestinationBox.SelectedIndex switch { 1 => ImportDestination.DeviceAms, 2 => ImportDestination.ProjectLibrary, _ => ImportDestination.Both };
     private List<PrinterTarget> SelectedPrinters() => _printers.Where(p => p.IsSelected).Select(p => p.ToTarget()).ToList();
     private void UpdateControls()
     {
-        if (ModeDescription is null) return;
+        if (StudioStatus is null) return;
         var studio = BambuProcess.IsStudioRunning();
         var other = WorkspaceContext.IsAnotherWorkspaceRunning();
         var canWrite = !_busy && _ready && (!_workspace.IsLive || (!studio && !other));
-        ModeDescription.Text = _workspace.IsLive ? "LIVE LIBRARY · Apply changes to your actual Bambu Studio profiles."
-            : "TEST COPY · Imports, edits and restores affect only this separate library.";
-        LiveMode.IsChecked = _workspace.IsLive;
-        TestMode.IsChecked = !_workspace.IsLive;
         StudioStatus.Text = studio ? "Studio open · live writes paused" : "Bambu Studio closed";
         if (_workspace.IsLive && other) StudioStatus.Text += " · close other BFI windows to write";
         var selectedCount = _products.Count(p => p.IsSelected);
         SelectionCount.Text = $"{selectedCount} filament{(selectedCount == 1 ? "" : "s")} selected";
         ReviewButton.IsEnabled = !_busy && _ready && _products.Any(p => p.IsSelected) && _printers.Any(p => p.IsSelected && p.Nozzles.Any(n => n.IsSelected));
         InstallButton.IsEnabled = canWrite && _plan?.HasChanges == true;
-        InstallButton.Content = _workspace.IsLive ? "Install into Bambu Studio" : "Install into test copy";
+        InstallButton.Content = UseCustomCheck.IsChecked == true ? "Install into Custom Library" : "Install into System Library";
         SaveButton.IsEnabled = canWrite && _editing is not null && _settings.Any(s => s.IsModified);
         RemoveButton.IsEnabled = ResetOverrideButton.IsEnabled = canWrite && _editing is not null;
-        ResetTestButton.IsEnabled = !_busy && !_workspace.IsLive;
         CheckUpdatesButton.IsEnabled = !_busy && !_checkingUpdates;
         UpdateAppButton.IsEnabled = !_busy && !_workspace.IsPreview;
         EditStatus.Text = _editing is null ? "Choose a profile to view settings." : $"{_settings.Count(s => s.IsModified)} unsaved changes · {_settings.Count} settings";
     }
     private void Selection_Changed(object? sender, PropertyChangedEventArgs e) { if (_suppress) return; _plan = null; UpdateControls(); }
-    private void ImportOption_Changed(object sender, SelectionChangedEventArgs e) { if (_productView is null) return; _plan = null; UpdateControls(); }
-    private void ProductFilter_Changed(object sender, RoutedEventArgs e) => _productView?.Refresh();
-    private void LibraryFilter_Changed(object sender, TextChangedEventArgs e) => _libraryView?.Refresh();
+    private void ImportOption_Changed(object sender, RoutedEventArgs e) { _plan = null; UpdateControls(); }
+    private void RefreshProductTree()
+    {
+        if (ProductsTree is null || _suppress) return;
+        var nodes = FilamentTree.Catalog(_products, ProductSearch.Text, VendorFilter.SelectedItem as string ?? "All manufacturers");
+        if (string.IsNullOrWhiteSpace(ProductSearch.Text)) FilamentTree.PreserveExpansion(_productNodes, nodes);
+        _productNodes = nodes; ProductsTree.ItemsSource = nodes;
+    }
+    private void RefreshLibraryTree()
+    {
+        if (LibraryTree is null || _suppress) return;
+        var nodes = FilamentTree.Library(_library, LibrarySearch.Text);
+        if (string.IsNullOrWhiteSpace(LibrarySearch.Text)) FilamentTree.PreserveExpansion(_libraryNodes, nodes);
+        _libraryNodes = nodes; LibraryTree.ItemsSource = nodes;
+    }
+    private void ProductFilter_Changed(object sender, RoutedEventArgs e) => RefreshProductTree();
+    private void LibraryFilter_Changed(object sender, TextChangedEventArgs e) => RefreshLibraryTree();
     private void SettingsFilter_Changed(object sender, RoutedEventArgs e) => _settingsView?.Refresh();
     private void SetSelections(IEnumerable<ProductChoice> products, bool selected)
     {
@@ -213,7 +215,7 @@ public partial class WorkspaceWindow : Window
         try { foreach (var product in products) product.IsSelected = selected; }
         finally { _suppress = false; _plan = null; UpdateControls(); }
     }
-    private void SelectVisible_Click(object sender, RoutedEventArgs e) => SetSelections(_productView.Cast<ProductChoice>(), true);
+    private void SelectVisible_Click(object sender, RoutedEventArgs e) => SetSelections(FilamentTree.Flatten(_productNodes).Where(n => n.Product is not null).Select(n => n.Product!), true);
     private void ClearSelection_Click(object sender, RoutedEventArgs e) => SetSelections(_products, false);
     private void Dark_Click(object sender, RoutedEventArgs e)
     {
@@ -243,12 +245,13 @@ public partial class WorkspaceWindow : Window
     {
         var products = _products.Where(p => p.IsSelected).ToList();
         var printers = SelectedPrinters();
-        var destination = Destination;
+        var useCustom = UseCustomCheck.IsChecked == true;
         await RunAsync("Building a change plan…", async () =>
         {
-            _plan = await Task.Run(() => ImportPlan.Create(_workspace.Paths, products, printers, destination));
+            _plan = await Task.Run(() => ImportSelectionPlan.Create(_workspace.Paths, products, printers, useCustom));
             ReviewGrid.ItemsSource = _plan.Changes;
-            ReviewSummary.Text = $"{products.Count} filament{(products.Count == 1 ? "" : "s")} · {_plan.Changes.Count} profile changes · {string.Join(", ", printers.Select(p => p.DisplayName))}";
+            ReviewSummary.Text = $"{products.Count} filament{(products.Count == 1 ? "" : "s")} · {_plan.Changes.Count} profile changes · {string.Join(", ", printers.Select(p => p.DisplayName))}\n" +
+                (useCustom ? "Custom Library only. Saved separately from Bambu's system catalog." : "Bambu System Library. Grouped by brand in Studio, with a recovery backup in BFI.");
             BrowsePanel.Visibility = SuccessPanel.Visibility = Visibility.Collapsed;
             ReviewPanel.Visibility = Visibility.Visible;
             Log(_plan.HasChanges ? "Review is ready. Nothing has been installed yet." : "Everything selected is already available for these printers and destinations.");
@@ -265,7 +268,7 @@ public partial class WorkspaceWindow : Window
             BrowsePanel.Visibility = ReviewPanel.Visibility = Visibility.Collapsed;
             SuccessPanel.Visibility = Visibility.Visible;
             SuccessSummary.Text = $"{result.WrittenFiles.Count} profile files written; {result.ProjectPresetEntriesAdded.Count} project dropdown entries added.\n\n" +
-                (_workspace.IsLive ? "Open Bambu Studio and select the target printer/nozzle to use your filaments." : "This was a real import into your test copy. Bambu Studio's live profiles were not changed. Inspect the results in My library.") + "\n\nThe full backup is available in Maintenance.";
+                (_workspace.IsLive ? "Open Bambu Studio and select the target printer/nozzle to use your filaments." : "This was a real import into your test copy. Bambu Studio's live profiles were not changed. Inspect the results in My Library.") + "\n\nThe full backup is available in Maintenance.";
             Log("Import complete and catalog validation passed.");
         });
     }
@@ -285,21 +288,28 @@ public partial class WorkspaceWindow : Window
     }
     private void ClearEditor()
     {
-        _editing = null; _chosenProduct = null;
+        _editing = null; _chosenProduct = null; _chosenNode = null;
         _settings.Clear(); ProfilePicker.ItemsSource = null;
         EditorTitle.Text = "Choose a filament"; ScopeText.Text = "";
     }
-    private void LibrarySelection_Changed(object sender, SelectionChangedEventArgs e)
+    private void LibrarySelection_Changed(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         if (_suppress) return;
-        if (!CanLeaveEditor()) { _suppress = true; LibraryList.SelectedItem = _chosenProduct; _suppress = false; return; }
-        _chosenProduct = LibraryList.SelectedItem as LibraryProduct;
+        if (e.NewValue is not FilamentTreeNode node || node.LibraryProduct is null) return;
+        if (!CanLeaveEditor())
+        {
+            _suppress = true; node.IsTreeSelected = false;
+            if (_chosenNode is not null) _chosenNode.IsTreeSelected = true;
+            _suppress = false; return;
+        }
+        _chosenNode = node;
+        _chosenProduct = node.LibraryProduct;
         _suppress = true;
         _editing = null; _settings.Clear();
-        EditorTitle.Text = _chosenProduct?.Name ?? "Choose a filament";
-        ProfilePicker.ItemsSource = _chosenProduct?.Profiles.OrderBy(p => p.IsBaseProfile).ThenBy(p => p.Name).Select(p => new ProfileOption(p)).ToList();
+        EditorTitle.Text = _chosenProduct.Name;
+        ProfilePicker.ItemsSource = _chosenProduct.Profiles.OrderBy(p => p.IsBaseProfile).ThenBy(p => p.Name).Select(p => new ProfileOption(p)).ToList();
         ProfilePicker.SelectedIndex = -1;
-        ScopeText.Text = "Choose the printer profile explicitly. Shared bases affect all inheriting profiles.";
+        ScopeText.Text = _chosenProduct.StorageLabel + ". Choose the printer profile explicitly. Shared bases affect all inheriting profiles.";
         _suppress = false; UpdateControls();
     }
     private void ProfileSelection_Changed(object sender, SelectionChangedEventArgs e)
@@ -325,8 +335,9 @@ public partial class WorkspaceWindow : Window
         _editHash = FileHash(profile.ProfilePath);
         CategoryFilter.ItemsSource = new[] { "All settings" }.Concat(_settings.Select(s => s.Category).Distinct()).ToList();
         CategoryFilter.SelectedIndex = 0;
-        ScopeText.Text = profile.IsBaseProfile ? "SHARED BASE: changes are inherited by dependent printer profiles."
-            : profile.Name + " · " + profile.Location + "\nCompatible: " + string.Join(", ", profile.CompatiblePrinters);
+        ScopeText.Text = (profile.StorageKind == FilamentStorageKind.UserPreset ? "Custom Library" : "Bambu System Library · Studio updates may replace these changes") + "\n" +
+            (profile.IsBaseProfile ? "SHARED BASE: changes are inherited by dependent printer profiles."
+            : profile.Name + "\nCompatible: " + string.Join(", ", profile.CompatiblePrinters));
         UpdateControls();
     }
     private static string FileHash(string path) => File.Exists(path) ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))) : "missing";
@@ -386,24 +397,46 @@ public partial class WorkspaceWindow : Window
             await ReloadAsync(); Log("Profile removed; catalog validation passed.");
         });
     }
-    private async void Mode_Click(object sender, RoutedEventArgs e)
-    {
-        var live = LiveMode.IsChecked == true;
-        if (live == _workspace.IsLive) return;
-        if (!CanLeaveEditor() || (live && MessageBox.Show(this,
-            "Switch to your actual Bambu Studio library? Imports, edits and restores will change real profiles after you apply them. Close Studio and any other BFI windows before writing. Automatic backups remain enabled.",
-            "Use live library", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes))
-        { LiveMode.IsChecked = _workspace.IsLive; TestMode.IsChecked = !_workspace.IsLive; return; }
-        await RunAsync("Switching library…", async () =>
-        {
-            _plan = null; ClearEditor();
-            await Task.Run(() => _workspace.SetLive(live));
-            Back_Click(this, new RoutedEventArgs());
-            await ReloadAsync(); Log(live ? "Live library selected. Review carefully before applying changes." : "Test copy selected. Your live profiles will not be changed.");
-        });
-    }
     private void LoadBackups() => BackupList.ItemsSource = Directory.EnumerateFiles(_workspace.BackupFolder, "*.bflbackup")
         .Select(p => new FileInfo(p)).OrderByDescending(p => p.LastWriteTime).ToList();
+    private async void StudioRecovery_Click(object sender, RoutedEventArgs e) => await CheckStudioRecoveryAsync(true);
+    private async Task CheckStudioRecoveryAsync(bool manual)
+    {
+        if (_workspace.IsPreview) return;
+        await RunAsync("Checking Studio update recovery…", async () =>
+        {
+            var service = new StudioRecoveryService(_workspace);
+            var offer = await Task.Run(service.Check);
+            if (offer is not null)
+            {
+                StudioRecoveryText.Text = $"Studio changed from {offer.Saved.StudioVersion} to {offer.CurrentVersion}. Your backup from {offer.Saved.CreatedUtc.ToLocalTime():g} is kept until you restore it.";
+                if (!manual && _deferredRecoveryVersion == offer.CurrentVersion) return;
+                var answer = MessageBox.Show(this,
+                    $"Bambu Studio has been updated since you last opened BFI ({offer.Saved.StudioVersion} → {offer.CurrentVersion}).\n\nYour imported filaments may have been overwritten by this update. Would you like to restore your last saved filament configuration?\n\nBackup: {offer.Saved.CreatedUtc.ToLocalTime():g} · {offer.Saved.ProfileNames.Count} imported system profiles.\n\nThis restores saved settings for these profiles and merges their library entries. New Bambu profiles, custom presets, and unrelated Studio settings are kept. Close Bambu Studio before restoring.\n\nChoose No to do this later from Maintenance; the backup will be kept.",
+                    "Restore filaments after Studio update?", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (answer != MessageBoxResult.Yes) { _deferredRecoveryVersion = offer.CurrentVersion; return; }
+                if (!CanLeaveEditor()) return;
+                await Task.Run(() => service.Restore(offer));
+                _deferredRecoveryVersion = null;
+                await ReloadAsync();
+                StudioRecoveryText.Text = $"Imported system profiles restored for Studio {offer.CurrentVersion}. Recovery backup refreshed.";
+                Log("Your saved filament configuration was restored. You can reopen Bambu Studio.");
+                return;
+            }
+            if (BambuProcess.IsStudioRunning() || WorkspaceContext.IsAnotherWorkspaceRunning())
+            {
+                StudioRecoveryText.Text = "Close Bambu Studio and other BFI windows to refresh the recovery backup. Any previous recovery point is kept.";
+                if (manual) MessageBox.Show(this, StudioRecoveryText.Text, "Studio update recovery");
+                return;
+            }
+            var saved = await Task.Run(() => service.Capture());
+            var state = service.ReadState();
+            StudioRecoveryText.Text = saved && state is not null
+                ? $"Recovery ready for Studio {state.StudioVersion}: {state.ProfileNames.Count} imported profiles, saved {state.CreatedUtc.ToLocalTime():g}."
+                : "Recovery backup was not refreshed. The Studio version may be unavailable or previously backed-up profiles may be missing. Existing backups are kept.";
+            if (manual) MessageBox.Show(this, StudioRecoveryText.Text, "Studio update recovery");
+        });
+    }
     private async void Backup_Click(object sender, RoutedEventArgs e) => await RunAsync("Creating backup…", async () =>
     { var path = await Task.Run(() => _workspace.CreateBackup("manual")); LoadBackups(); Log("Backup saved: " + Path.GetFileName(path)); });
     private void OpenBackupFolder_Click(object sender, RoutedEventArgs e) => Process.Start(new ProcessStartInfo(_workspace.BackupFolder) { UseShellExecute = true });
@@ -436,14 +469,15 @@ public partial class WorkspaceWindow : Window
     {
         if (!CanLeaveEditor()) return;
         var targets = SelectedPrinters();
-        if (!targets.Any()) { MessageBox.Show(this, "Select the printers and nozzles on Add filaments first."); return; }
+        if (!targets.Any()) { MessageBox.Show(this, "Select the printers and nozzles on Add Filaments first."); return; }
         var count = 0;
         _suppress = true;
         try { foreach (var product in _products)
         {
             var exists = _current.Any(p => p.CanEdit && p.ProductName.Equals(product.Name, StringComparison.OrdinalIgnoreCase));
             var profile = new FilamentProfileEntry { Name = product.ProfileName };
-            product.IsSelected = exists && targets.Any(t => !PrinterProfileExpander.IsTargetCovered(profile, t, _current, ImportDestination.DeviceAms));
+            product.IsSelected = exists && targets.Any(t => !PrinterProfileExpander.IsTargetCovered(profile, t, _current,
+                UseCustomCheck.IsChecked == true ? ImportDestination.ProjectLibrary : ImportDestination.DeviceAms));
             if (product.IsSelected) count++;
         } }
         finally { _suppress = false; _plan = null; UpdateControls(); }
@@ -546,7 +580,7 @@ public partial class WorkspaceWindow : Window
     }
     private async void AdvancedTools_Click(object sender, RoutedEventArgs e)
     {
-        if (!_workspace.IsLive) { MessageBox.Show(this, "Advanced tools operate on the live library. Switch to Live Studio library first."); return; }
+        if (!_workspace.IsLive) { MessageBox.Show(this, "Advanced tools operate on the live library. The separate development preview does not offer advanced live tools."); return; }
         if (!CanLeaveEditor()) return;
         try { _workspace.EnsureWritable(); }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Advanced tools"); return; }
@@ -554,16 +588,16 @@ public partial class WorkspaceWindow : Window
         window.ShowDialog();
         await RunAsync("Refreshing library…", ReloadAsync);
     }
-    private async void ResetTest_Click(object sender, RoutedEventArgs e)
-    {
-        if (!CanLeaveEditor() || MessageBox.Show(this, "Archive the existing test copy and create a fresh copy of your current Studio library? Live profiles will not change.", "Refresh test copy", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-        await RunAsync("Creating a fresh test copy…", async () => { await Task.Run(_workspace.ResetTestCopy); await ReloadAsync(); _ready = true; Log("Fresh test copy ready. Previous test copy archived."); });
-    }
+
 }
 
-public sealed record LibraryProduct(string Name, List<CurrentFilamentEntry> Profiles)
+public sealed record LibraryProduct(string Name, List<CurrentFilamentEntry> Profiles, string? Manufacturer = null)
 {
-    public string Summary => $"{Profiles.FirstOrDefault()?.VendorGroup} · {Profiles.Count} profiles";
+    public string Brand => Manufacturer ?? FilamentTree.NormalizeBrand(Profiles[0].VendorGroup, Profiles[0].MaterialFamily);
+    public string Material => Profiles[0].MaterialFamily;
+    public FilamentStorageKind StorageKind => Profiles[0].StorageKind;
+    public string StorageLabel => StorageKind == FilamentStorageKind.UserPreset ? "Custom Library" : "Bambu System Library";
+    public string Summary => $"{Brand} · {Material} · {StorageLabel} · {Profiles.Count} profiles";
 }
 public sealed record ProfileOption(CurrentFilamentEntry Entry)
 {

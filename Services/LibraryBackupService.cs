@@ -25,7 +25,7 @@ public sealed class LibraryBackupService
         _isStudioRunning = isStudioRunning ?? BambuProcess.IsStudioRunning;
     }
 
-    public LibraryBackupResult Create(string outputPath)
+    public LibraryBackupResult Create(string outputPath, ISet<string>? catalogNames = null)
     {
         EnsureStudioClosed("backing up the library");
         var library = new BambuLibraryScanner(_paths).LoadCurrentFilaments();
@@ -34,7 +34,8 @@ public sealed class LibraryBackupService
             CreatedUtc = DateTime.UtcNow.ToString("O"),
             SourcePresetFolder = Path.GetFileName(_paths.ActiveUserPresetFolder),
             CatalogEntries = library
-                .Where(entry => entry.StorageKind == FilamentStorageKind.SystemCatalog)
+                .Where(entry => entry.StorageKind == FilamentStorageKind.SystemCatalog
+                    && (catalogNames is null || catalogNames.Contains(entry.Name)))
                 .Select(entry => new LibraryBackupCatalogEntry
                 {
                     Name = entry.Name,
@@ -50,7 +51,16 @@ public sealed class LibraryBackupService
         LoadConfigState(manifest);
 
         var catalogFiles = CollectCatalogFiles();
-        var userFiles = CollectUserFiles();
+        if (catalogNames is not null)
+        {
+            var selectedPaths = manifest.CatalogEntries.Select(e => e.RelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            catalogFiles = catalogFiles.Where(p => selectedPaths.Contains(p.Key)).ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+            manifest.ProjectPresetNames = manifest.ProjectPresetNames.Where(catalogNames.Contains).ToList();
+            manifest.AmsRecentPresetNames = manifest.AmsRecentPresetNames.Where(catalogNames.Contains).ToList();
+            // Slot order belongs to the current project, not to a recovered catalog.
+            manifest.ActiveFilamentSelections.Clear();
+        }
+        var userFiles = catalogNames is null ? CollectUserFiles() : [];
         var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
         if (!string.IsNullOrWhiteSpace(outputDirectory))
         {

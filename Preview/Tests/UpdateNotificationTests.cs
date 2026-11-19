@@ -7,14 +7,14 @@ internal static class UpdateNotificationTests
     public static void Run(string root)
     {
         const string releaseJson = """
-            {"tag_name":"v0.6.0","draft":false,"prerelease":false,
-             "html_url":"https://github.com/Zataralee/Bambu-Filament-Importer/releases/tag/v0.6.0",
+            {"tag_name":"v0.6.1","draft":false,"prerelease":false,
+             "html_url":"https://github.com/Zataralee/Bambu-Filament-Importer/releases/tag/v0.6.1",
              "assets":[{"name":"BambuFilamentImporter.exe","browser_download_url":"https://example.invalid/app.exe"},
-                       {"name":"Bambu-Filament-Importer-v0.6.0-win-x64.zip","browser_download_url":"https://example.invalid/update.zip"}]}
+                       {"name":"Bambu-Filament-Importer-v0.6.1-win-x64.zip","browser_download_url":"https://example.invalid/update.zip"}]}
             """;
         using var document = JsonDocument.Parse(releaseJson);
         var release = UpdateService.ParseRelease(document.RootElement);
-        Check(release.Version > new Version(0, 4, 15) && release.Version > new Version(0, 5, 0), "stable release upgrades public and compatibility builds");
+        Check(release.Version > new Version(0, 4, 15) && release.Version > new Version(0, 6, 0), "stable release upgrades public and compatibility builds");
         // This is the exact tag/asset selection contract used by the existing public client.
         var legacyVersion = Version.Parse(document.RootElement.GetProperty("tag_name").GetString()!.TrimStart('v', 'V'));
         var legacyAsset = document.RootElement.GetProperty("assets").EnumerateArray().First(a => a.GetProperty("name").GetString()!.EndsWith("-win-x64.zip"));

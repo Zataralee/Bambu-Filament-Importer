@@ -33,13 +33,23 @@ public sealed class ImportPlan
     public int SelectedProducts { get; init; }
     public bool HasChanges => Package.Manifest.Profiles.Any(p => p.IsSelected);
     public static ImportPlan Create(BambuPaths paths, IReadOnlyCollection<ProductChoice> selected,
-        IReadOnlyCollection<PrinterTarget> printers, ImportDestination destination)
+        IReadOnlyCollection<PrinterTarget> printers, ImportDestination destination, bool customLibrary = false)
     {
         if (selected.Count == 0) throw new InvalidOperationException("Select at least one filament.");
         if (printers.Count == 0 || printers.Any(p => p.MachinePresetNames.Count == 0))
             throw new InvalidOperationException("Select at least one printer and nozzle.");
         var before = WorkspaceContext.Fingerprint(paths);
         var current = new BambuLibraryScanner(paths).LoadCurrentFilaments();
+        if (customLibrary)
+        {
+            // Studio skips user presets whose names duplicate system presets.
+            printers = printers.Select(p => new PrinterTarget { Vendor = p.Vendor, ModelName = p.ModelName,
+                ProfileSuffix = p.ProfileSuffix + " (Custom)", MachinePresetNames = p.MachinePresetNames,
+                NozzleSummary = p.NozzleSummary, IsSelected = true }).ToList();
+            current = current.Where(e => e.StorageKind != FilamentStorageKind.UserPreset
+                || (e.Name.EndsWith(" (Custom)", StringComparison.OrdinalIgnoreCase)
+                    && Path.GetDirectoryName(e.ProfilePath)!.Equals(paths.ActiveUserFilamentFolder, StringComparison.OrdinalIgnoreCase))).ToList();
+        }
         var manifest = new FilamentPackage { DisplayName = "Workspace selection", PackageId = "bfi-workspace-selection", PrinterNeutral = false };
         var jsons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var changes = new List<PlannedChange>();
@@ -54,6 +64,7 @@ public sealed class ImportPlan
             {
                 p.IsSelected = group.Any(c => c.ProfileName.Equals(p.Name, StringComparison.OrdinalIgnoreCase));
                 p.IsDuplicate = false; // Imports preserve existing tuning; replacement is not implicit.
+                if (customLibrary) p.VendorGroup = package.Manifest.Manufacturer;
             }
             var expanded = PrinterProfileExpander.Expand(package, printers, current,
                 destination == ImportDestination.Both ? ImportDestination.DeviceAms : destination);
@@ -125,11 +136,15 @@ public sealed class ImportPlan
     {
         workspace.EnsureWritable();
         if (!HasChanges) throw new InvalidOperationException("There are no changes to apply.");
+        ValidateCurrent(workspace);
+        return LibraryTransaction.Run(workspace, "import", () => new BambuInstaller(workspace.Paths,
+            () => workspace.IsLive && BambuProcess.IsStudioRunning()).Install(Package, Destination, false));
+    }
+    public void ValidateCurrent(WorkspaceContext workspace)
+    {
         if (Fingerprint != WorkspaceContext.Fingerprint(workspace.Paths)
             || PackageHashes.Any(p => !File.Exists(p.Key) || Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(p.Key))) != p.Value))
             throw new InvalidOperationException("The library or package changed since review. Review the selection again before installing.");
-        return LibraryTransaction.Run(workspace, "import", () => new BambuInstaller(workspace.Paths,
-            () => workspace.IsLive && BambuProcess.IsStudioRunning()).Install(Package, Destination, false));
     }
 }
 
@@ -146,6 +161,7 @@ public static class LibraryTransaction
             workspace.EnsureWritable();
             var result = action();
             BambuCatalogIntegrity.ValidateProfileRoot(paths.RoamingProfileRoot);
+            if (workspace.IsLive) new StudioRecoveryService(workspace).Capture(explicitChange: true);
             return result;
         }
         catch (Exception failure)

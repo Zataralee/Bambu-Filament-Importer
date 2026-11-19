@@ -692,7 +692,7 @@ try
     Check(projectResult.UserPresetEntriesWritten.Count == 1 && File.Exists(userPreset), "Project Library import");
     var userJson = JsonNode.Parse(File.ReadAllText(userPreset))!.AsObject();
     Check(userJson["from"]?.GetValue<string>() == "User", "Project Library profile type");
-    Check(userJson["inherits"]?.GetValue<string>() == "Generic ABS", "Project Library generic parent");
+    Check(userJson["inherits"]?.GetValue<string>() == "", "Custom Library has no system parent dependency");
 
     var backupPath = Path.Combine(sandbox, "complete-library.bflbackup");
     var backupResult = new LibraryBackupService(testPaths, () => false).Create(backupPath);
